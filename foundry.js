@@ -21,6 +21,7 @@ const terminalColumns=120;
 
 const flagNames={
 	commitonstart : "commit shared files on start",
+	saveonexit : " save conversation history on exit",
 	tools : "enable model tool interface",
 	ansi : "markdown ANSI rendering",
 	slow : "output at reading speed",
@@ -28,12 +29,13 @@ const flagNames={
 	broken : "ansi background blocks",
 	logging : "log all output to file",
 	resetcounters : "factory reset when reset",
-	returntopush : "hit return to /push - it is under test"
+	returntopush : "hit return to /push - under test"
 };
 
 const emptyRoha={
 	config:{
 		commitonstart:true,
+		saveonexit:false,
 		ansi:true,
 		slow:false,
 		verbose:false,
@@ -49,6 +51,15 @@ const emptyRoha={
 	saves:[],
 	counters:{}
 };
+
+async function exitFoundry(){
+	echo("exitFoundry");
+	await flush();
+	if(roha.config.saveonexit){
+		await saveHistory();
+	}
+	await flush();
+}
 
 function addBand(){
 	let id="member"+increment("members");
@@ -548,13 +559,14 @@ function resolvePath(dir,filename){
 const reader = Deno.stdin.readable.getReader();
 const writer = Deno.stdout.writable.getWriter();
 
+let inputBuffer = new Uint8Array(0);
+
 async function prompt2(message) {
 	if (message) {
 		await writer.write(encoder.encode(message));
 		await writer.ready;
 	}
 	Deno.stdin.setRaw(true);
-	let inputBuffer = new Uint8Array(0);
 	try {
 		while (true) {
 			const { value, done } = await reader.read();
@@ -567,6 +579,7 @@ async function prompt2(message) {
 					}
 				} else if (byte === 0x1b) { // Escape sequence
 					if(value.length==1){
+						await exitFoundry();
 						Deno.exit(0);
 					}
 					if(value.length==3){
@@ -578,7 +591,9 @@ async function prompt2(message) {
 				} else if (byte === 0x0A || byte === 0x0D) { // Enter key
 					await writer.write(encoder.encode("\r\n"));
 					let line = decoder.decode(inputBuffer);
-					line=line.trim();
+					let n=line.length;
+					if(n>0) inputBuffer = inputBuffer.slice(n);					
+					line=line.trimEnd();
 					log(line,"stdin");
 					return line;
 				} else {
@@ -846,8 +861,7 @@ async function callCommand(command) {
 				break;
 			case "save":
 				let savename=words.slice(1).join(" ");
-				saveHistory(savename);
-				await writeRoha();
+				await saveHistory(savename);
 				break;
 			case "model":
 				let name=words[1];
@@ -880,7 +894,8 @@ async function callCommand(command) {
 				const files = Deno.readDirSync(currentDir);
 				echo("Contents of", currentDir + ":");
 				for (const file of files) {
-					echo(file.name);
+					let name=(file.isDirectory)?"["+file.name+"]":file.name;
+					echo(name);
 				}
 				break;
 			case "drop":
@@ -1186,9 +1201,6 @@ async function chat() {
 }
 
 Deno.addSignalListener("SIGINT", () => {Deno.exit(0);});
-
-//only windows Deno.addSignalListener("SIGBREAK", () => {echo("SIGBREAK");});
-
 await runCode("isolation/test.js","isolation");
-
-chat();
+await chat();
+exitFoundry();

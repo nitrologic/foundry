@@ -1,3 +1,8 @@
+latest issues
+
+// no SIGBREAK on macos
+//only windows Deno.addSignalListener("SIGBREAK", () => {echo("SIGBREAK");});
+
 latest news
 
 April 2025
