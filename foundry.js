@@ -313,24 +313,16 @@ async function resetModel(name){
 	await writeRoha();
 }
 
-function listShares(){
-	let shares=roha.sharedFiles;
-	for(let i=0;i<shares.length;i++){
-		let line=shares[i].path;
-		if(shares[i].tag)line+=" ["+shares[i].tag+"]";
-		if(shares[i].description) line+=" - "+shares[i].description;
-		echo(i,line);
-	}
-}
-
-function listSharedFiles(){
+function listShare(){
 	const list=[];
 	let count=0;
 	let sorted = roha.sharedFiles.slice();
 	sorted.sort((a, b) => b.size - a.size);
 	for (const share of sorted) {
+		let shared=(rohaShares.includes(share.path))?"*":"";
 		let tags="["+share.tag+"]";
-		echo((count++),share.path,share.size,tags);
+		let info=(share.description)?share.description:"";
+		echo((count++),share.path,share.size,shared,tags,info);
 		list.push(share.id);
 	}
 	shareList=list;
@@ -823,9 +815,6 @@ async function callCommand(command) {
 					listCommand="model";
 				}
 				break;
-			case "list":
-				await listSharedFiles();
-				break;
 			case "reset":
 				await resetRoha();
 				break;
@@ -845,10 +834,12 @@ async function callCommand(command) {
 				}
 				break;
 			case "share":
-				if (words.length>1) {
-					const filename = words[1];
+				if (words.length==1){
+					listShare();
+				}else{
+					const filename = words.slice(1).join(" ");
 					const path = resolvePath(Deno.cwd(), filename);
-					const info = await Deno.stat(path);
+					const info = await Deno.stat(path);										
 					const tag = await prompt2("Enter tag name (optional):");
 					if(info.isDirectory){
 						echo("Share directory path:",path);
@@ -862,8 +853,6 @@ async function callCommand(command) {
 						await addShare({path,size,modified,hash,tag});
 					}
 					await writeRoha();
-				}else{
-					listShares();
 				}
 				break;
 			case "dump":
