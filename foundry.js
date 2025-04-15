@@ -173,7 +173,7 @@ const rohaTools = [{
 },{
 	type: "function",
 	function: {
-		name: "annotate_roha",
+		name: "annotate_foundry",
 		description: "Set description of any object",
 		parameters: {
 			type: "object",
@@ -361,7 +361,7 @@ function dropShares(){
 	for(let item of rohaHistory){
 		if(item && item.role==="user" && item.user==="forge"){
 			item.user="drop";
-			item.content="dropped path "+item.path;			
+			item.content="dropped path "+(item.path||"");			
 		}
 	}
 	rohaShares=[];
@@ -720,8 +720,7 @@ async function commitShares(tag) {
 	}
 
 	if (dirty&&tag) {
-		// invoke an annotate_roha tool
-		let invoke="please annotate_roha tag "+tag;
+		let invoke="feel free to call annotate_foundry to tag "+tag;
 		rohaHistory.push({role:"system",content:invoke});
 	}
 
@@ -886,6 +885,7 @@ async function callCommand(command) {
 				break;
 			case "drop":
 				dropShares();
+				await writeRoha();
 				break;
 			case "share":
 				if (words.length==1){
@@ -976,7 +976,7 @@ async function onCall(toolCall) {
 			await Deno.writeTextFile(filePath, args.content);
 			echo("File saved to:", filePath);
 			return { success: true, path: filePath };
-		case "annotate_roha":
+		case "annotate_foundry":
 			try {
 				const { name, type, description } = JSON.parse(toolCall.function.arguments || "{}");
 				switch(type){
@@ -990,7 +990,7 @@ async function onCall(toolCall) {
 				await writeRoha(); // Persist changes
 				return { success: true, updated: 1 };
 			} catch (error) {
-				echo("annotate_roha error:",error);
+				echo("annotate_foundry error:",error);
 				return { success: false, updated: 0 };
 			}
 	}
@@ -1119,7 +1119,7 @@ async function relay() {
 		}
 		rohaHistory.push({ role: "assistant", content: reply });
 	} catch (error) {
-		let line=error.toString();
+		let line=error.message || String(error);
 		//Error during API call: Error: 400 "This model's maximum prompt length is 131072 but the request contains 165547 tokens."
 		if(line.includes("maximum prompt length")){
 			echo("maximum prompt length exceeded, switch model or drop shares to continue");

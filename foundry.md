@@ -34,12 +34,14 @@ Adjust settings to suit current preferences.
 Default values are typically:
 
 * 0 commitonstart : commit shared files on start : true
-* 1 ansi : markdown ANSI rendering : true
-* 2 slow : output at reading speed : true
-* 3 verbose : emit debug information : true
-* 4 broken : ansi background blocks : false
-* 5 logging : log all output to file : true
-* 6 resetcounters : at reset zero all counters : true
+* 1 tools : enable model tool interface : false
+* 2 ansi : markdown ANSI rendering : true
+* 3 slow : output at reading speed : true
+* 4 verbose : emit debug information : false
+* 5 broken : ansi background blocks : false
+* 6 logging : log all output to file : true
+* 7 resetcounters : factory reset when reset : false
+* 8 returntopush : hit return to /push - it is under test : false
 
 ### /share
 
