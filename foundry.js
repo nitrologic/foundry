@@ -1118,7 +1118,8 @@ async function chat() {
 
 Deno.addSignalListener("SIGINT", () => {Deno.exit(0);});
 
-Deno.addSignalListener("SIGBREAK", () => {echo("SIGBREAK");});
+//only windows
+//Deno.addSignalListener("SIGBREAK", () => {echo("SIGBREAK");});
 
 await runCode("isolation/test.js","isolation");
 

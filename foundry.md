@@ -38,12 +38,6 @@ Default values are typically:
 * 5 logging : log all output to file : true
 * 6 resetcounters : at reset zero all counters : true
 
-### /list
-
-Display all shared files.
-
-Includes paths, sizes, and optional tags for each file.
-
 ### /share
 
 Share a file or folder with optional tag.
