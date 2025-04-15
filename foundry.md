@@ -30,12 +30,12 @@ Adjust settings to suit current preferences.
 
 Default values are typically:
 
-0 commitonstart : commit shared files on start : true
-1 ansi : markdown ANSI rendering : true
-2 slow : output at reading speed : true
-3 verbose : emit debug information : true
-4 broken : ansi background blocks : false
-5 logging : log all output to file : true
+* 0 commitonstart : commit shared files on start : true
+* 1 ansi : markdown ANSI rendering : true
+* 2 slow : output at reading speed : true
+* 3 verbose : emit debug information : true
+* 4 broken : ansi background blocks : false
+* 5 logging : log all output to file : true
 
 ### /list
 
