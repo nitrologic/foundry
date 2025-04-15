@@ -21,7 +21,9 @@ Requires an api environment variable, see accounts.json for latest
 
 /push
 
-/reset
+/drop
+
+exit
 
 # reference
 
