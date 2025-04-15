@@ -54,7 +54,7 @@ function listBand(){
 	for(let id in roha.band){
 		let member=roha.band[id];
 		band.push(member);
-	}	
+	}
 	band.push("add");
 	for(let i=0;i<band.length;i++){
 		echo(i,band[i]);
@@ -90,7 +90,7 @@ function increment(key){
 
 var tagList=[];
 var modelList=[];
-var shareList=[];
+var shareList=[]; //typically biggest to smallest
 var memberList=[];
 
 const emptyModel={
@@ -326,7 +326,9 @@ function listShares(){
 function listSharedFiles(){
 	const list=[];
 	let count=0;
-	for (const share of roha.sharedFiles) {
+	let sorted = roha.sharedFiles.slice();
+	sorted.sort((a, b) => b.size - a.size);
+	for (const share of sorted) {
 		let tags="["+share.tag+"]";
 		echo((count++),share.path,share.size,tags);
 		list.push(share.id);
@@ -491,7 +493,7 @@ function resolvePath(dir,filename){
 	return path;
 }
 
-// a raw mode prompt replacement 
+// a raw mode prompt replacement
 
 // arrow navigation and tab completion incoming
 
@@ -663,7 +665,7 @@ async function commitShares(tag) {
 
 	if (dirty) {
 		// invoke an annotate_roha tool
-		let invoke="please annotate_roha tag "+tag;	
+		let invoke="please annotate_roha tag "+tag;
 		rohaHistory.push({role:"system",content:invoke});
 	}
 

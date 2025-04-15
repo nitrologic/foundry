@@ -36,6 +36,7 @@ Default values are typically:
 * 3 verbose : emit debug information : true
 * 4 broken : ansi background blocks : false
 * 5 logging : log all output to file : true
+* 6 resetcounters : at reset zero all counters : true
 
 ### /list
 
