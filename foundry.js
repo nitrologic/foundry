@@ -179,6 +179,15 @@ function measure(o){
 }
 
 let outputBuffer = [];
+let printBuffer = [];
+
+function print(){
+	let args=arguments.length?Array.from(arguments):[];
+	let lines=args.join(" ").split("\n");
+	for(let line of lines){
+		printBuffer.push(line.trimEnd());
+	}
+}
 
 function echo(){
 	let args=arguments.length?Array.from(arguments):[];
@@ -192,21 +201,29 @@ function stripAnsi(text) {
 	return text.replace(/\x1B\[\d+(;\d+)*[mK]/g, '');
 }
 
-async function log(lines){
+async function log(lines,id){
 	if(roha.config.logging){
 		const time = new Date().toISOString();
+		let list=[];
 		for(let line of lines.split("\n")){
 			line=stripAnsi(line);
-			await Deno.writeTextFile("foundry.log",time+" "+line+"\n",{ append: true });
+			line=time+" ["+id+"] "+line+"\n";
+			list.push(line);
 		}
+		await Deno.writeTextFile("foundry.log",list.join(),{append:true});
 	}
 }
 
 async function flush() {
 	const delay = roha.config.slow ? slowMillis : 0;
+	for (const line of printBuffer) {
+		console.log(line);
+		log(line,"model");
+	}
+	printBuffer=[];
 	for (const line of outputBuffer) {
 		console.log(line);
-		log(line);
+		log(line,"stdout");
 		await sleep(delay);
 	}
 	outputBuffer=[];
@@ -530,7 +547,7 @@ async function prompt2(message) {
 					await writer.write(encoder.encode("\r\n"));
 					let line = decoder.decode(inputBuffer);
 					line=line.trim();
-					log(">>"+line);
+					log(line,"stdin");
 					return line;
 				} else {
 					await writer.write(new Uint8Array([byte]));
@@ -547,6 +564,15 @@ async function prompt2(message) {
 }
 
 // callers to addShare expected to await writeRoha after
+
+const eventList=[];
+
+async function watchPaths(paths,handler){
+	const watcher = Deno.watchFs(paths,{recursive:false});
+	for await (const event of watcher) {
+		eventList.push(event);
+	}
+}
 
 async function addShare(share){
 	share.id="share"+increment("shares");
@@ -846,7 +872,7 @@ async function callCommand(command) {
 				}else{
 					const filename = words.slice(1).join(" ");
 					const path = resolvePath(Deno.cwd(), filename);
-					const info = await Deno.stat(path);										
+					const info = await Deno.stat(path);
 					const tag = await prompt2("Enter tag name (optional):");
 					if(info.isDirectory){
 						echo("Share directory path:",path);
@@ -1063,10 +1089,10 @@ async function relay() {
 			reply = choice.message.content;
 			if (roha.config && roha.config.ansi) {
 //				echo(ansiSaveCursor);
-				echo(mdToAnsi(reply));
+				print(mdToAnsi(reply));
 //				echo(ansiRestoreCursor);
 			} else {
-				echo(wordWrap(reply));
+				print(wordWrap(reply));
 			}
 		}
 		rohaHistory.push({ role: "assistant", content: reply });
@@ -1104,7 +1130,7 @@ async function chat() {
 					await relay();
 				}
 				break;
-			}			
+			}
 			if (line === "exit") {
 				echo("Ending the conversation...");
 				break dance;
