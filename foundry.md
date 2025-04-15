@@ -6,7 +6,8 @@ Warning, models with tool support may write to the forge folder at any time.
 
 ## foundry machine interface
 
-The foundry functional interface uses tools and tool_calls.
+The foundry functional interface uses tools tool_calls and the "tool" role
+when config.tools enabled with config option.
 
 Only recent models provide tools interface, foundry should fall 
 back to a no tools completion mode.
