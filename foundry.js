@@ -27,7 +27,7 @@ const flagNames={
 	broken : "ansi background blocks",
 	logging : "log all output to file",
 	resetcounters : "at reset zero all counters",
-	returntopush : "just hit return to /push"
+	returntopush : "hit return to /push - it is under test"
 };
 
 const emptyRoha={
@@ -36,7 +36,10 @@ const emptyRoha={
 		ansi:true,
 		slow:false,
 		verbose:false,
-		broken:false
+		broken:false,
+		logging:false,
+		resetcounters:false,
+		returntopush:false
 	},
 	tags:{},
 	models:{},
@@ -69,7 +72,8 @@ function annotateTag(name,description){
 		throw("null name");
 	}
 	if(!(name in roha.tags)) {
-		throw("tag not found "+name);
+		roha.tags[name]={};
+//		throw("tag not found "+name);
 	}
 	roha.tags[name].description=description;
 }
@@ -1093,11 +1097,13 @@ async function chat() {
 				line=await prompt2(rohaPrompt);
 			}
 			if (line === '') {
-				if(roha.config.returntopush) line="/push";
-			}else{
+				if(roha.config.returntopush && !lines.length) {
+					echo("auto pushing...");
+					await callCommand("push");
+					await relay();
+				}
 				break;
-			}
-			
+			}			
 			if (line === "exit") {
 				echo("Ending the conversation...");
 				break dance;
@@ -1113,6 +1119,7 @@ async function chat() {
 			}
 			lines.push(line.trim());
 		}
+
 		if (lines.length){
 			const query=lines.join("\n");
 			if(query.length){
