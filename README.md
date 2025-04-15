@@ -19,7 +19,7 @@ requires an api environment variable, see accounts.json for latest
 
 /share [folder]
 
-/dump
+/push
 
 /reset
 

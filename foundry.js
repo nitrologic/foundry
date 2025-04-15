@@ -8,13 +8,14 @@ import { contentType } from "https://deno.land/std@0.224.0/media_types/mod.ts";
 import { resolve } from "https://deno.land/std/path/mod.ts";
 import OpenAI from "https://deno.land/x/openai@v4.67.2/mod.ts";
 
+const foundryVersion = "rc1";
+const rohaTitle="foundry "+foundryVersion;
+const rohaMihi="I am testing foundry client. You are a helpful assistant.";
+
 const slowMillis = 20;
 
 const decoder = new TextDecoder("utf-8");
 const encoder = new TextEncoder();
-
-const rohaTitle="foundry";
-const rohaMihi="I am testing foundry client. You are a helpful assistant.";
 
 const terminalColumns=120;
 
@@ -25,7 +26,8 @@ const flagNames={
 	verbose : "emit debug information",
 	broken : "ansi background blocks",
 	logging : "log all output to file",
-	resetcounters : "at reset zero all counters"
+	resetcounters : "at reset zero all counters",
+	returntopush : "just hit return to /push"
 };
 
 const emptyRoha={
@@ -339,7 +341,7 @@ async function saveHistory(name) {
 	try {
 		let timestamp=Math.floor(Date.now()/1000).toString(16);
 		let filename=(name||".transmission-"+timestamp)+".json";
-		let line="Saved roha chat history to "+filename+".";
+		let line="Saved session to "+filename+".";
 		rohaHistory.push({role:"system",content:line});
 		await Deno.writeTextFile(filename, JSON.stringify(rohaHistory,null,"\t"));
 		echo(line);
@@ -655,7 +657,7 @@ async function commitShares(tag) {
 		echo(`Invalid shares detected:\n${removedPaths.join('\n')}`);
 	}
 
-	if (dirty) {
+	if (dirty&&tag) {
 		// invoke an annotate_roha tool
 		let invoke="please annotate_roha tag "+tag;
 		rohaHistory.push({role:"system",content:invoke});
@@ -855,7 +857,7 @@ async function callCommand(command) {
 					await writeRoha();
 				}
 				break;
-			case "dump":
+			case "push":
 			case "commit":
 				let tag="";
 				if(words.length>1){
@@ -1090,7 +1092,12 @@ async function chat() {
 			}else{
 				line=await prompt2(rohaPrompt);
 			}
-			if (line === '') break;
+			if (line === '') {
+				if(roha.config.returntopush) line="/push";
+			}else{
+				break;
+			}
+			
 			if (line === "exit") {
 				echo("Ending the conversation...");
 				break dance;
@@ -1118,8 +1125,7 @@ async function chat() {
 
 Deno.addSignalListener("SIGINT", () => {Deno.exit(0);});
 
-//only windows
-//Deno.addSignalListener("SIGBREAK", () => {echo("SIGBREAK");});
+//only windows Deno.addSignalListener("SIGBREAK", () => {echo("SIGBREAK");});
 
 await runCode("isolation/test.js","isolation");
 

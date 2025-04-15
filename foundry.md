@@ -42,9 +42,9 @@ Default values are typically:
 
 Share a file or folder with optional tag.
 
-Files are added to the share list used by the /dump /commit /foundry command.
+Files are added to the share list used by the /push /commit command.
 
-### /dump /commit /foundry
+### /push /commit
 
 Refresh shared files. 
 
