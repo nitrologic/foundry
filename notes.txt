@@ -1,4 +1,10 @@
 latest news
 
+April 2025
+
 development project roha is now release candidate foundry
+
+original development repository now archived at https://github.com/nitrologic/roha
+
+isolation passed initial bootstrap test, run deno, run
 
