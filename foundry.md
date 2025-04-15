@@ -4,9 +4,12 @@ A command line application designed to chat and share files.
 
 ## foundry machine interface
 
-The foundry functional interface uses tool.
+The foundry functional interface uses tools and tool_calls.
 
-See the OpenAI API spec for more details.
+Only recent models provide tools interface, foundry should fall 
+back to a no tools completion mode.
+
+See the OpenAI API spec for more tool role details.
 
 ### read_time
 
