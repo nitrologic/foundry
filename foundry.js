@@ -238,7 +238,7 @@ const MaxFileSize=65536;
 const appDir = Deno.cwd();
 const rohaPath = resolve(appDir,"foundry.json");
 const accountsPath = resolve(appDir,"accounts.json");
-const cachePath=resolve(appDir,"cache");
+const forgePath=resolve(appDir,"forge");
 
 const modelAccounts = JSON.parse(await Deno.readTextFile(accountsPath));
 
@@ -344,10 +344,11 @@ function listSaves(){
 async function saveHistory(name) {
 	try {
 		let timestamp=Math.floor(Date.now()/1000).toString(16);
-		let filename=(name||".transmission-"+timestamp)+".json";
-		let line="Saved session to "+filename+".";
+		let filename=(name||"transmission-"+timestamp)+".json";
+		let filePath = resolve(forgePath,filename);
+		let line="Saved session "+filename+".";
 		rohaHistory.push({role:"system",content:line});
-		await Deno.writeTextFile(filename, JSON.stringify(rohaHistory,null,"\t"));
+		await Deno.writeTextFile(filePath,JSON.stringify(rohaHistory,null,"\t"));
 		echo(line);
 		roha.saves.push(filename);
 		await writeRoha();
@@ -924,7 +925,7 @@ async function onCall(toolCall) {
 			let timestamp=Math.floor(Date.now()/1000).toString(16);
 			let extension=extensionForType(args.contentType)
 			let name= "submission-"+timestamp+extension;
-			let filePath = resolve(cachePath,name);
+			let filePath = resolve(forgePath,name);
 			await Deno.writeTextFile(filePath, args.content);
 			echo("File saved to:", filePath);
 			return { success: true, path: filePath };
