@@ -2,7 +2,12 @@
 
 a command line client to share folders and chat
 
-requires XAI_API_KEY DEEPSEEK_API_KEY or OPENAI_API_KEY environment variable to run
+requires an api environment variable, see accounts.json for latest
+
+* DEEPSEEK_API_KEY
+* OPENAI_API_KEY 
+* XAI_API_KEY 
+* GEMINI_API_KEY
 
 # interface
 
@@ -17,12 +22,6 @@ requires XAI_API_KEY DEEPSEEK_API_KEY or OPENAI_API_KEY environment variable to 
 /dump
 
 /reset
-
-# work in progress
-
-/load
-
-/save
 
 # reference
 
