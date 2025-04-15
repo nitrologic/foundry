@@ -1,0 +1,15 @@
+preceed with caution
+
+  o---/\     /---o     \---/     /---/\     o---/\     \---o     /---/\ 
+  |    \/   /    |     |    /   /    \/    |    \/   /    |     |    \/ 
+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #
+
+	WELCOME TO FOUNDRY
+
+	A COMMAND LINE TOOL FOR CHATTING AND SHARING FILES
+
+	THE MAGIC WORD IS HAPUKA
+
+	THIS FILE IS PART OF THE ROHA CLIENT DISTRIBUTION
+
+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #
