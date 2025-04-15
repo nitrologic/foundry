@@ -106,9 +106,9 @@ Display current account information.
 
 Save the current conversation history. 
 
-Creates a snapshot file of the conversation.
+Creates a snapshot file of the conversation in the forge folder.
 
-The default name is currently .roa-save-HEX32_TIME.json
+Defaults to transmission-HEX32_TIME.json
 
 ### /load
 
