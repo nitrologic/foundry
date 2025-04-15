@@ -1,5 +1,5 @@
 // foundry.js
-// a command line file sharing chat application
+// a research client for evaluating models
 // (c)2025 Simon Armstrong
 
 // deno run --allow-run --allow-env --allow-net --allow-read --allow-write roha.js
@@ -21,12 +21,13 @@ const terminalColumns=120;
 
 const flagNames={
 	commitonstart : "commit shared files on start",
+	tools : "enable model tool interface",
 	ansi : "markdown ANSI rendering",
 	slow : "output at reading speed",
 	verbose : "emit debug information",
 	broken : "ansi background blocks",
 	logging : "log all output to file",
-	resetcounters : "at reset zero all counters",
+	resetcounters : "factory reset when reset",
 	returntopush : "hit return to /push - it is under test"
 };
 
@@ -119,8 +120,25 @@ function resetHistory(){
 	rohaHistory = [{role:"system",content:rohaMihi}];
 }
 
-function rohaPush(content){
-	rohaHistory.push({role: "user",name: "roha",content});
+function listHistory(){
+	let history=rohaHistory;
+	for(let i=0;i<history.length;i++){
+		let item=history[i];
+		let content=readable(item.content).substring(0,90)
+		echo(i,item.role,item.name||"foundry","-",content);
+	}
+	if(roha.config.broken){
+		let flat=squashMessages(rohaHistory);
+		for(let i=0;i<flat.length;i++){
+			let item=flat[i];
+			let content=readable(item.content).substring(0,90);
+			echo("flat",i,item.role,item.name||"broken",content);
+		}
+	}
+}
+
+function rohaPush(content,name="foundry"){
+	rohaHistory.push({role:"user",name,content});
 }
 
 resetHistory();
@@ -323,6 +341,9 @@ async function connectAccount(account) {
 		modelList=modelList.concat(list);
 		return endpoint;
 	}catch(error){
+	// Error: 429 "Your team ac0a3c9a-0e58-4e3c-badd-be853c027a7f has either used all available credits or 
+	// reached its monthly spending limit. To continue making API requests, please purchase more credits or 
+	// raise your spending limit."
 		echo(error);
 	}
 	return null;
@@ -334,6 +355,17 @@ async function resetModel(name){
 	rohaHistory.push({role:"system",content:"Model changed to "+name+"."});
 	echo("with model",name,grokFunctions)
 	await writeRoha();
+}
+
+function dropShares(){
+	for(let item of rohaHistory){
+		if(item && item.role==="user" && item.user==="forge"){
+			item.user="drop";
+			item.content="dropped path "+item.path;			
+		}
+	}
+	rohaShares=[];
+	echo("all shares dropped");
 }
 
 function listShare(){
@@ -640,16 +672,15 @@ async function shareFile(path,tag) {
 				if(txt.length){
 					let metadata=JSON.stringify({path,length,type,tag});
 					rohaPush(metadata);
-					rohaPush(txt);
+					rohaPush(txt,"forge");
 				}
 			}else{
 				const base64Encoded = btoa(String.fromCharCode(...new Uint8Array(fileContent)));
 				const mimeType = fileType(extension);
-
 				let metadata=JSON.stringify({path,length,type,mimeType,tag});
 				rohaPush(metadata);
 				let binary=`File content: MIME=${mimeType}, Base64=${base64Encoded}`;
-				rohaPush(binary);
+				rohaPush(binary,"forge");
 			}
 		}
 	}
@@ -799,20 +830,7 @@ async function callCommand(command) {
 				echo("Current time:", new Date().toString());
 				break;
 			case "history":
-				let history=rohaHistory;
-				for(let i=0;i<history.length;i++){
-					let item=history[i];
-					let content=readable(item.content).substring(0,90)
-					echo(i,item.role,item.name||"guest",content);
-				}
-				if(roha.config.broken){
-					let flat=squashMessages(rohaHistory);
-					for(let i=0;i<flat.length;i++){
-						let item=flat[i];
-						let content=readable(item.content).substring(0,90);
-						echo("flat",i,item.role,item.name||"guest",content);
-					}
-				}
+				listHistory();
 				break;
 			case "load":
 				let save=words[1];
@@ -866,6 +884,9 @@ async function callCommand(command) {
 					echo(file.name);
 				}
 				break;
+			case "drop":
+				dropShares();
+				break;
 			case "share":
 				if (words.length==1){
 					listShare();
@@ -916,7 +937,7 @@ let grokUsage = 0;
 
 echo("present [",grokModel,"]");
 echo("shares count:",roha.sharedFiles.length)
-echo("use /help for latest");
+echo("use /help for latest and exit to quit");
 echo("");
 
 let sessions=increment("sessions");
@@ -1033,7 +1054,8 @@ async function relay() {
 		let model=modelAccount[0];
 		let account=modelAccount[1];
 		let endpoint=rohaAccount[account];
-		const payload = grokFunctions?{ model, messages:rohaHistory, tools: rohaTools }:{ model, messages:squashMessages(rohaHistory) };
+		let usetools=grokFunctions&&roha.config.tools;
+		const payload = usetools?{ model, messages:rohaHistory, tools: rohaTools }:{ model, messages:squashMessages(rohaHistory) };
 		const completion = await endpoint.chat.completions.create(payload);
 		if (completion.model != model) {
 			echo("[relay model alert model:" + completion.model + " grokModel:" + grokModel + "]");
@@ -1097,7 +1119,13 @@ async function relay() {
 		}
 		rohaHistory.push({ role: "assistant", content: reply });
 	} catch (error) {
-		console.error("Error during API call:", error);
+		let line=error.toString();
+		//Error during API call: Error: 400 "This model's maximum prompt length is 131072 but the request contains 165547 tokens."
+		if(line.includes("maximum prompt length")){
+			echo("maximum prompt length exceeded, switch model or drop shares to continue");
+			return;
+		}
+		console.error("Error during API call:", error);	
 		if(grokFunctions){
 			echo("resetting grokFunctions")
 			grokFunctions=false;

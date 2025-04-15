@@ -1,6 +1,8 @@
-# foundry command line client
+# nitrologic foundry research tool
 
 A command line application designed to chat and share files.
+
+Warning, models with tool support may write to the forge folder at any time.
 
 ## foundry machine interface
 
@@ -43,6 +45,10 @@ Default values are typically:
 Share a file or folder with optional tag.
 
 Files are added to the share list used by the /push /commit command.
+
+### /drop
+
+Drop all files currently shared
 
 ### /push /commit
 

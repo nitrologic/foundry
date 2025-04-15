@@ -1,8 +1,8 @@
-# foundry
+# nitrologic foundry
 
-a command line client to share folders and chat
+A research tool for model manipulation with star powered dialog
 
-requires an api environment variable, see accounts.json for latest
+Requires an api environment variable, see accounts.json for latest
 
 * DEEPSEEK_API_KEY
 * OPENAI_API_KEY 
@@ -29,6 +29,10 @@ More command documentation [foundry.md](foundry.md)
 
 Project roadmap [roadmap.md](roadmap.md)
 
+Initial nitrologic roha development [roha](https://github.com/nitrologic/roha) (archived)
+
 # development
 
 https://github.com/nitrologic/foundry
+
+
