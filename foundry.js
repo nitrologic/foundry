@@ -8,19 +8,6 @@ import { contentType } from "https://deno.land/std@0.224.0/media_types/mod.ts";
 import { resolve } from "https://deno.land/std/path/mod.ts";
 import OpenAI from "https://deno.land/x/openai@v4.67.2/mod.ts";
 
-function getOpenCommand(path) {
-	if (Deno.build.os === "windows") return ["cmd", "/c", "start", "", path];
-	if (Deno.build.os === "darwin")  return ["open", path];
-	return ["xdg-open", path];
-}
-
-async function openWithDefaultApp(path) {
-  const cmd = getOpenCommand(path);
-  const proc = Deno.run({ cmd });
-  await proc.status();
-  proc.close();
-}
-
 const foundryVersion = "rc1";
 const rohaTitle="foundry "+foundryVersion;
 const rohaMihi="I am testing foundry client. You are a helpful assistant.";
@@ -74,10 +61,23 @@ const emptyRoha={
 	sharedFiles:[],
 	saves:[],
 	counters:{},
-	models:{},
 	mut:{},
+	lode:{},
 	forge:[]
 };
+
+function getOpenCommand(path) {
+	if (Deno.build.os === "windows") return ["cmd", "/c", "start", "", path];
+	if (Deno.build.os === "darwin")  return ["open", path];
+	return ["xdg-open", path];
+}
+
+async function openWithDefaultApp(path) {
+	const cmd = getOpenCommand(path);
+	const proc = Deno.run({ cmd });
+	await proc.status();
+	proc.close();
+}
 
 function onForge(args){
 	let list=roha.forge;
@@ -343,13 +343,16 @@ if (!fileExists) {
 echo(rohaTitle,"running from "+rohaPath);
 await readFoundry();
 
-const rohaAccount={};
+const rohaEndpoint={};
 for(let account in modelAccounts){
 	let endpoint = await connectAccount(account);
-	if(endpoint) rohaAccount[account]=endpoint;
+	if(endpoint) {
+		rohaEndpoint[account]=endpoint;
+		await specAccount(account);
+	}
 }
 
-function stringify(value, seen = new WeakSet(), keyName = "") {
+function safeStringify(value, seen = new WeakSet(), keyName = "") {
 	if (typeof value === "string") return value;
 	if (value === null || typeof value !== "object") return String(value);
 	if (typeof value === "function") return "[function]";
@@ -374,7 +377,7 @@ async function connectAccount(account) {
 		const endpoint = new OpenAI({ apiKey, baseURL: config.url });
 		if(verbose){
 			for(const [key, value] of Object.entries(endpoint)){
-				let content=stringify(value);
+				let content=safeStringify(value);
 				echo("endpoint:"+key+":"+content);
 			}
 		}
@@ -396,6 +399,14 @@ async function connectAccount(account) {
 		echo(error);
 	}
 	return null;
+}
+
+async function specAccount(account){
+	const config = modelAccounts[account];
+	const endpoint = rohaEndpoint[account];
+	if(!(account in roha.lode)){
+		roha.lode[account] = {name: account,url: endpoint.baseURL,env: config.env,credit: 0};
+	}
 }
 
 async function specModel(model,account){
@@ -573,6 +584,7 @@ async function readFoundry(){
 		if(!roha.band) roha.band={};
 		if(!roha.mut) roha.mut={};
 		if(!roha.forge) roha.forge=[];
+		if(!roha.lode) roha.lode={};
 	} catch (error) {
 		console.error("Error reading or parsing",rohaPath,error);
 		roha=emptyRoha;
@@ -876,14 +888,33 @@ function listTags(){
 	tagList=list;
 }
 
-function listAccounts(){
-	let list=[];
+function onAccount(){
+	let list=roha.forge;
+	if(args.length>1){
+		let name=args.slice(1).join(" ");
+		if(name.length && !isNaN(name)) {
+			let item=list[name|0];
+			echo("opening",item.name,"from",item.path);
+			openWithDefaultApp(item.path);
+		}
+	}else{
+		let list=[];
 	for(let key in modelAccounts){
 		let value=modelAccounts[key];
 		list.push(key);
 	}
+	rohaLode=list;
+
+
 	for(let i=0;i<list.length;i++){
-		echo(i,list[i]);
+		let key=list[i];
+		if(key in roha.lode){
+			let lode=roha.lode[key];
+			echo(i,key,lode.credit);
+		}else{
+			echo(i,key);
+		}
+		listCommand="account";
 	}
 }
 
@@ -919,7 +950,7 @@ async function callCommand(command) {
 				await listTags();
 				break;
 			case "account":
-				await listAccounts();
+				await onAccount(words);
 				break;
 			case "help":
 				await showHelp();
@@ -1188,7 +1219,7 @@ async function relay() {
 		const modelAccount=grokModel.split("@");
 		let model=modelAccount[0];
 		let account=modelAccount[1];
-		let endpoint=rohaAccount[account];
+		let endpoint=rohaEndpoint[account];
 		let usetools=grokFunctions&&roha.config.tools;
 		const payload = usetools?{ model, messages:rohaHistory, tools: rohaTools }:{ model, messages:squashMessages(rohaHistory) };
 		const completion = await endpoint.chat.completions.create(payload);
