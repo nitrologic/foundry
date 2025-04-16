@@ -66,6 +66,10 @@ const emptyRoha={
 	forge:[]
 };
 
+function cleanup(){
+	Deno.stdin.setRaw(false);
+}
+
 async function exitFoundry(){
 	echo("exitFoundry");
 	await flush();
@@ -73,6 +77,7 @@ async function exitFoundry(){
 		await saveHistory();
 	}
 	await flush();
+	cleanup();
 }
 
 function price(credit){
@@ -1369,7 +1374,7 @@ async function chat() {
 	}
 }
 
-Deno.addSignalListener("SIGINT", () => {Deno.exit(0);});
+Deno.addSignalListener("SIGINT", () => {cleanup();Deno.exit(0);});
 await runCode("isolation/test.js","isolation");
 await chat();
 exitFoundry();
