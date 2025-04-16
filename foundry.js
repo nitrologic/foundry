@@ -8,6 +8,19 @@ import { contentType } from "https://deno.land/std@0.224.0/media_types/mod.ts";
 import { resolve } from "https://deno.land/std/path/mod.ts";
 import OpenAI from "https://deno.land/x/openai@v4.67.2/mod.ts";
 
+function getOpenCommand(path) {
+	if (Deno.build.os === "windows") return ["cmd", "/c", "start", "", path];
+	if (Deno.build.os === "darwin")  return ["open", path];
+	return ["xdg-open", path];
+}
+
+async function openWithDefaultApp(path) {
+  const cmd = getOpenCommand(path);
+  const proc = Deno.run({ cmd });
+  await proc.status();
+  proc.close();
+}
+
 const foundryVersion = "rc1";
 const rohaTitle="foundry "+foundryVersion;
 const rohaMihi="I am testing foundry client. You are a helpful assistant.";
@@ -62,8 +75,26 @@ const emptyRoha={
 	saves:[],
 	counters:{},
 	models:{},
-	mut:{}
+	mut:{},
+	forge:[]
 };
+
+function onForge(args){
+	let list=roha.forge;
+	if(args.length>1){
+		let name=args.slice(1).join(" ");
+		if(name.length && !isNaN(name)) {
+			let item=list[name|0];
+			echo("opening",item.name,"from",item.path);
+			openWithDefaultApp(item.path);
+		}
+	}else{
+		for(let i=0;i<list.length;i++){
+			echo(i,list[i].name);
+		}
+		listCommand="forge";
+	}
+}
 
 async function exitFoundry(){
 	echo("exitFoundry");
@@ -261,7 +292,7 @@ async function flush() {
 	for (const line of printBuffer) {
 		console.log(line);
 		log(line,"model");
-		await sleep(delay)		
+		await sleep(delay)
 	}
 	printBuffer=[];
 	for (const line of outputBuffer) {
@@ -506,7 +537,7 @@ function mdToAnsi(md) {
 					line = ansiPurple + line + ansiReset;
 				}
 				// bullets
-				if (line.startsWith('-') || line.startsWith('*') || line.startsWith('+')) {
+				if (line.startsWith('*') || line.startsWith('+')) {
 					line = '• ' + line.substring(1).trim();
 				}
 				// bold
@@ -541,6 +572,7 @@ async function readFoundry(){
 		if(!roha.counters) roha.counters={};
 		if(!roha.band) roha.band={};
 		if(!roha.mut) roha.mut={};
+		if(!roha.forge) roha.forge=[];
 	} catch (error) {
 		console.error("Error reading or parsing",rohaPath,error);
 		roha=emptyRoha;
@@ -874,6 +906,9 @@ async function callCommand(command) {
 	let words = command.split(" ");
 	try {
 		switch (words[0]) {
+			case "forge":
+				onForge(words);
+				break;
 			case "band":
 				listBand();
 				break;
@@ -1053,6 +1088,7 @@ if(roha.config){
 }
 
 function extensionForType(contentType) {
+	if (contentType.includes("html")) return ".html";
 	if (contentType.includes("markdown")) return ".md";
 	if (contentType.includes("json")) return ".json";
 	if (contentType.includes("javascript")) return ".js";
@@ -1075,6 +1111,7 @@ async function onCall(toolCall) {
 			let filePath = resolve(forgePath,name);
 			await Deno.writeTextFile(filePath, args.content);
 			echo("File saved to:", filePath);
+			roha.forge.push({name,path:filePath,contentType});
 			return { success: true, path: filePath };
 		case "annotate_foundry":
 			try {
