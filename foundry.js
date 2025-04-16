@@ -12,7 +12,7 @@ const foundryVersion = "rc1";
 const rohaTitle="foundry "+foundryVersion;
 const rohaMihi="I am testing foundry client. You are a helpful assistant.";
 
-const slowMillis = 150;
+const slowMillis = 25;
 
 // main roha application starts here
 
@@ -40,7 +40,8 @@ const flagNames={
 	broken : "ansi background blocks",
 	logging : "log all output to file",
 	resetcounters : "factory reset when reset",
-	returntopush : "hit return to /push - under test"
+	returntopush : "hit return to /push - under test",
+	rawPrompt : "experimental rawmode stdin deno prompt replacement"
 };
 
 const emptyRoha={
@@ -640,7 +641,9 @@ async function runCode(){
 }
 
 // a raw mode prompt replacement
+// roha.config.rawPrompt is not default
 // arrow navigation and tab completion incoming
+// a reminder to enable rawPrompt for new modes
 
 const reader = Deno.stdin.readable.getReader();
 const writer = Deno.stdout.writable.getWriter();
@@ -648,6 +651,7 @@ const writer = Deno.stdout.writable.getWriter();
 var promptBuffer = new Uint8Array(0);
 
 async function promptFoundry(message) {
+	if(!roha.config.rawPrompt) return prompt(message);
 	let result = "";
 	if (message) {
 		await writer.write(encoder.encode(message));
