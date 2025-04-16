@@ -12,7 +12,7 @@ const foundryVersion = "rc1";
 const rohaTitle="foundry "+foundryVersion;
 const rohaMihi="I am testing foundry client. You are a helpful assistant.";
 
-const slowMillis = 20;
+const slowMillis = 150;
 
 // main roha application starts here
 
@@ -60,7 +60,8 @@ const emptyRoha={
 	sharedFiles:[],
 	saves:[],
 	counters:{},
-	models:{}
+	models:{},
+	mut:{}
 };
 
 async function exitFoundry(){
@@ -259,6 +260,7 @@ async function flush() {
 	for (const line of printBuffer) {
 		console.log(line);
 		log(line,"model");
+		await sleep(delay)		
 	}
 	printBuffer=[];
 	for (const line of outputBuffer) {
@@ -350,7 +352,7 @@ async function connectAccount(account) {
 			let name=model.id+"@"+account;
 			list.push(name);
 // dont do this	if(verbose) echo("model - ",JSON.stringify(model,null,"\t"));
-			await statModel(model,account);
+			await specModel(model,account);
 		}
 		list.sort();
 		modelList=modelList.concat(list);
@@ -364,7 +366,7 @@ async function connectAccount(account) {
 	return null;
 }
 
-async function statModel(model,account){
+async function specModel(model,account){
 	let name=model.id+"@"+account;
 	let exists=name in roha.mut;
 	let info=exists?roha.mut[name]:{name,notes:[],sessions:0};
@@ -621,6 +623,43 @@ const writer = Deno.stdout.writable.getWriter();
 var promptBuffer = new Uint8Array(0);
 
 async function prompt2(message) {
+	let chunks = [];
+	if (message) {
+		await writer.write(encoder.encode(message));
+		await writer.ready;
+	}
+	Deno.stdin.setRaw(true);
+	try {
+		while (true) {
+			const { value, done } = await reader.read();
+			if (done || !value) break;
+			for (const byte of value) {
+				if (byte === 0x7F || byte === 0x08) { // Backspace
+					if (chunks.length > 0) {
+						chunks.pop();
+						await writer.write(new Uint8Array([0x08, 0x20, 0x08]));
+					}
+				} else if (byte === 0x0A || byte === 0x0D) { // Enter
+					await writer.write(new Uint8Array([0x0D, 0x0A]));
+					const result = new TextDecoder().decode(new Uint8Array(chunks));
+					log(result, "stdin");
+					return result.trimEnd();
+				} else if (byte === 0x1b) { // Escape
+					await exitFoundry();
+					Deno.exit(0);
+				} else {
+					chunks.push(byte);
+					await writer.write(new Uint8Array([byte]));
+				}
+			}
+		}
+	} finally {
+		Deno.stdin.setRaw(false);
+	}
+	return "";
+}
+
+async function prompt4(message) {
 	let result = "";
 	if (message) {
 		await writer.write(encoder.encode(message));
@@ -1011,9 +1050,10 @@ async function callCommand(command) {
 					for(let i=0;i<modelList.length;i++){
 						let name=modelList[i];
 						let attr=(name==grokModel)?"*":" ";
-						let mut=(name in roha.mut)?roha.mut[name]:"";
-					    let flag = (mut.canForge) ? "𝆑" : "";
-						echo(i,attr,name,flag,mut.sessions);
+						let mut=(name in roha.mut)?roha.mut[name]:{notes:[]};
+					    let flag = (mut.hasForge) ? "𝆑" : "";
+						let notes=mut.notes.join(" ");
+						echo(i,attr,name,flag,mut.sessions,notes);
 					}
 					listCommand="model";
 				}
@@ -1217,11 +1257,14 @@ async function relay() {
 		let system = completion.system_fingerprint;
 		let usage = completion.usage;
 		let size = measure(rohaHistory);
-		grokUsage += usage.prompt_tokens | 0 + usage.completion_tokens | 0;
+		let cost=[usage.prompt_tokens | 0,usage.completion_tokens | 0];
+		grokUsage += cost[0]+cost[1];
 		if(grokModel in roha.mut){
 			let mut=roha.mut[grokModel];
-			if(usetools && mut.canForge!==true){
-				mut.canForge=true;
+			mut.prompt_tokens=(mut.prompt_tokens|0)+cost[0];
+			mut.completion_tokens=(mut.completion_tokens|0)+cost[1];
+			if(usetools && mut.hasForge!==true){
+				mut.hasForge=true;
 				await writeFoundry();
 			}
 		}

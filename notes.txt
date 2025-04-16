@@ -1,3 +1,11 @@
+[model gpt-4.1-2025-04-14@openai 25911 338 102105 95453]
+>first, is there a chance vscode is escaping this line , there is a bunch of italics in this block, which is possibly a foundry issue
+> If you want the assistant (me) to analyze git commit logs from those files:*
+>singerror: Uncaught (in promise) InvalidData: Windows stdio in console mode does not support writing non-UTF-8 byte sequences
+    at async Object.write (ext:deno_web/06_streams.js:1181:9)
+
+    
+
 RC1 had no rules.txt!
 
 
