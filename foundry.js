@@ -66,36 +66,6 @@ const emptyRoha={
 	forge:[]
 };
 
-function getOpenCommand(path) {
-	if (Deno.build.os === "windows") return ["cmd", "/c", "start", "", path];
-	if (Deno.build.os === "darwin")  return ["open", path];
-	return ["xdg-open", path];
-}
-
-async function openWithDefaultApp(path) {
-	const cmd = getOpenCommand(path);
-	const proc = Deno.run({ cmd });
-	await proc.status();
-	proc.close();
-}
-
-function onForge(args){
-	let list=roha.forge;
-	if(args.length>1){
-		let name=args.slice(1).join(" ");
-		if(name.length && !isNaN(name)) {
-			let item=list[name|0];
-			echo("opening",item.name,"from",item.path);
-			openWithDefaultApp(item.path);
-		}
-	}else{
-		for(let i=0;i<list.length;i++){
-			echo(i,list[i].name);
-		}
-		listCommand="forge";
-	}
-}
-
 async function exitFoundry(){
 	echo("exitFoundry");
 	await flush();
@@ -103,6 +73,10 @@ async function exitFoundry(){
 		await saveHistory();
 	}
 	await flush();
+}
+
+function price(credit){
+	return "$"+(credit/100).toFixed(2);
 }
 
 function addBand(){
@@ -154,6 +128,7 @@ var tagList=[];
 var modelList=[];
 var shareList=[]; //typically biggest to smallest
 var memberList=[];
+var lodeList=[];
 
 const emptyModel={
 	name:"empty",account:"",hidden:false,prompts:0,completion:0
@@ -167,6 +142,7 @@ const emptyTag={
 let roha=emptyRoha;
 let rohaCalls=0;
 let listCommand="";
+let creditCommand=null;
 let rohaShares=[];
 let currentDir = Deno.cwd();
 var rohaHistory;
@@ -426,7 +402,7 @@ async function resetModel(name){
 	grokModel=name;
 	grokFunctions=true;
 	rohaHistory.push({role:"system",content:"Model changed to "+name+"."});
-	echo("resetModel name",name,count,grokFunctions);
+	echo("resetModel name",name,grokFunctions);
 	await writeFoundry();
 }
 
@@ -888,7 +864,7 @@ function listTags(){
 	tagList=list;
 }
 
-function onAccount(){
+function onForge(args){
 	let list=roha.forge;
 	if(args.length>1){
 		let name=args.slice(1).join(" ");
@@ -898,23 +874,49 @@ function onAccount(){
 			openWithDefaultApp(item.path);
 		}
 	}else{
-		let list=[];
-	for(let key in modelAccounts){
-		let value=modelAccounts[key];
-		list.push(key);
-	}
-	rohaLode=list;
-
-
-	for(let i=0;i<list.length;i++){
-		let key=list[i];
-		if(key in roha.lode){
-			let lode=roha.lode[key];
-			echo(i,key,lode.credit);
-		}else{
-			echo(i,key);
+		for(let i=0;i<list.length;i++){
+			echo(i,list[i].name);
 		}
-		listCommand="account";
+		listCommand="forge";
+	}
+}
+
+async function creditAccount(credit,account){
+	echo("creditAccount",account,"credit",price(credit));
+	let amount=Number(credit)*100|0;
+	if(account in roha.lode){
+		let lode=roha.lode[account];
+		lode.credit=amount;
+		echo("creditAccount",price(credit),account,"balance",price(lode.credit));
+		await writeFoundry();
+	}
+}
+
+function onAccount(args){
+	if(args.length>1){
+		let name=args.slice(1).join(" ");
+		if(name.length && !isNaN(name)) {
+			name=lodeList[name|0];
+		}
+		let lode=roha.lode[name];
+		echo("Adjust balance of",lode.name,"balance",price(lode.credit));
+		creditCommand=(credit) => creditAccount(credit, name);
+	}else{
+		let list=[];
+		for(let key in modelAccounts){
+			list.push(key);
+		}
+		for(let i=0;i<list.length;i++){
+			let key=list[i];
+			if(key in roha.lode){
+				let lode=roha.lode[key];
+				echo(i,key,price(lode.credit));
+			}else{
+				echo(i,key);
+			}
+			lodeList=list;
+			listCommand="credit";
+		}
 	}
 }
 
@@ -949,7 +951,7 @@ async function callCommand(command) {
 			case "tag":
 				await listTags();
 				break;
-			case "account":
+			case "credit":
 				await onAccount(words);
 				break;
 			case "help":
@@ -1086,7 +1088,7 @@ async function callCommand(command) {
 				dirty=await commitShares(tag);
 				break;
 			default:
-				echo("Command not recognised");
+				echo("Command not recognised",words[0]);
 				return false; // Command not recognized
 		}
 	} catch (error) {
@@ -1324,6 +1326,12 @@ async function chat() {
 					await callCommand(listCommand+" "+index);
 				}
 				listCommand="";
+			}else if(creditCommand){
+				line=await promptFoundry("$");
+				if(line.length && !isNaN(line)){
+					await creditCommand(line);
+				}
+				creditCommand="";
 			}else{
 				line=await promptFoundry(rohaPrompt);
 			}
