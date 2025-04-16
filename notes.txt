@@ -1,123 +1,134 @@
-1. the drop command instant quits!
+deepseek crash
 
-2. new crash hard to reproduce:
-
-10 rawPrompt : experimental rawmode stdin deno prompt replacement : false
-# 
-error: Uncaught (in promise) TypeError: Cannot read properties of null (reading 'length')
-                                if(line.length && !isNaN(line)){
-
-new rates feature is proving difficult to test, 
-
-other stuf...
-
-git diff --stat HEAD@{05:00}
-
-C:\nitrologic\foundry>git diff --stat HEAD@{05:00}
- .gitignore                |   2 +
- README.md                 |  14 +-
- forge/tokens to burn.json | 150 ++++++++++++++++++
- foundry-tools.md          |  17 +++
- foundry.js                | 382 +++++++++++++++++++++++++++++++++-------------
- foundry.md                |  50 +++---
- isolation/test.js         |   6 +-
- notes.txt                 |  90 +++++++++++
- run.bat                   |   4 +-
- 9 files changed, 579 insertions(+), 136 deletions(-)
-
- 
-
-[model gpt-4.1-2025-04-14@openai 25911 338 102105 95453]
->first, is there a chance vscode is escaping this line , there is a bunch of italics in this block, which is possibly a foundry issue
-> If you want the assistant (me) to analyze git commit logs from those files:*
->singerror: Uncaught (in promise) InvalidData: Windows stdio in console mode does not support writing non-UTF-8 byte sequences
-    at async Object.write (ext:deno_web/06_streams.js:1181:9)
-
-    
-
-RC1 had no rules.txt!
-
-
-recent crash
-
->the note command has been tested, works well!
+Account deepseek debited $0.0056. New balance: $18.4283
+[model deepseek-chat@deepseek 18158 636 36942 59532]
+> whats current time?
 >
-Error during API call: Error: 404 This is not a chat model and thus not supported in the v1/chat/completions endpoint. Did you mean to use v1/completions?
-    at APIError.generate (https://deno.land/x/openai@v4.67.2/error.ts:89:14)
+Error during API call: Error: 400 An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id', The following tool_call_ids did not have response messages: call_0_1cd9e5f7-7408-4a1c-9f0c-802c4ea6933e
+    at APIError.generate (https://deno.land/x/openai@v4.67.2/error.ts:77:14)
     at OpenAI.makeStatusError (https://deno.land/x/openai@v4.67.2/core.ts:498:21)
+    at OpenAI.makeRequest (https://deno.land/x/openai@v4.67.2/core.ts:580:24)
+    at eventLoopTick (ext:core/01_core.js:178:7)
+    at async relay (file:///C:/nitrologic/foundry/foundry.js:1321:22)
+    at async chat (file:///C:/nitrologic/foundry/foundry.js:1481:5)
+    at async file:///C:/nitrologic/foundry/foundry.js:1489:1 {
+  status: 400,
+  headers: {
+    "access-control-allow-credentials": "true",
+    "cf-cache-status": "DYNAMIC",
+    "cf-ray": "93168e8c9f9ee7cc-SYD",
+    "content-length": "310",
+    "content-type": "application/json",
+    date: "Wed, 16 Apr 2025 20:50:46 GMT",
+    server: "cloudflare",
+    "set-cookie": "__cf_bm=DQBPOyl.w2D8n1ViXcolEKTI3C9sTXIXGqxkBv1dHEc-1744836646-1.0.1.1-7Fafep2in0JqeysC1qEmaOtmxAvlvpXOnUF5YkM9Pn.WExIwK9UH_7Ivqwi4QOBrvNlUSYOz_HAPXss69rE9_hwY0AHw15Vs6oAugIw1.xk; path=/; expires=Wed, 16-Apr-25 21:20:46 GMT; domain=.deepseek.com; HttpOnly; Secure; SameSite=None",
+    "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+    vary: "origin, access-control-request-method, access-control-request-headers",
+    "x-content-type-options": "nosniff",
+    "x-ds-trace-id": "75acd5cdedf3f8f954d707d95ec32668"
+  },
+  error: {
+    message: "An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id', The following tool_call_ids did not have response messages: call_0_1cd9e5f7-7408-4a1c-9f0c-802c4ea6933e",
+    type: "invalid_request_error",
+    param: null,
+    code: "invalid_request_error"
+  },
+  code: "invalid_request_error",
+  param: null,
+  type: "invalid_request_error",
+  request_id: undefined
+}
+Account deepseek debited $0.0051. New balance: $18.4232
+[model deepseek-chat@deepseek 18802 14 55758 61997]
 
-    
 
-latest issues
 
-// no SIGBREAK on macos
-//only windows Deno.addSignalListener("SIGBREAK", () => {echo("SIGBREAK");});
+old notes
 
-latest news
 
-April 2025
+1. unexpected incode outcode messages with deepseek
 
-development project roha is now release candidate foundry
+[model deepseek-chat@deepseek 34094 731 92574 113459]
+inCode javascript
+outCode
+inCode javascript
+outCode
+inCode javascript
+outCode
+inCode javascript
+outCode
+inCode javascript
+outCode
+inCode javascript
+outCode
+> /commit
 
-original development repository now archived at https://github.com/nitrologic/roha
+2. tool_calls error from deepseek
 
-isolation passed initial bootstrap test, run deno, run
+Error during API call: Error: 400 An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id'. (insufficient tool messages following tool_calls message)
+    at APIError.generate (https://deno.land/x/openai@v4.67.2/error.ts:77:14)
 
-A review from o3-mini follows:
 
-1. Code Structure & Modularity
-  • The code is organized into functional blocks (e.g., sharing files, managing history, command parsing, tool calls),
-which is good for readability. Consider further splitting into modules (for example, separating CLI interactions, file
-I/O, and API communication) to simplify maintenance.
-
-2. Error Handling
-  • Most asynchronous file operations (e.g., reading and writing JSON files) include try/catch blocks. However, some
-areas (such as Deno.stdout or Deno.stdin operations) could benefit from more robust error handling.
-  • In functions like annotateShare and shareDir, if a file is not found or an error occurs, the error is logged but
-the recovery path isn’t always clear.
-
-3. Input/Output & Terminal Modes
-  • The prompt2 function sets Deno.stdin to raw mode and resets it in a finally block, which is good. Ensure that in
-the case of unexpected exceptions, the terminal always resets properly.
-  • The usage of ANSI escape codes and word wrapping is thoughtful, though the “broken” configuration flag might be
-better-documented to explain when these code paths are used.
-
-4. Recursion in Relay
-  • The relay function uses recursion when processing tool calls – every tool call re-invokes relay(). While this may
-be acceptable for short sessions, repeated or deeply nested tool call responses might risk hitting a recursion limit. A
-loop-based approach might be more reliable.
-
-5. Naming Consistency
-  • In the markdown help file, the tool is referred to as “annotatefoundry” while the actual code function is named
-“annotateroha”. Consistency here can avoid confusion for new contributors or users.
-  • Similarly, consider clarifying variables like “grokModel”, “roha”, and “rohaHistory” to ensure their roles are
-obvious.
-
-6. Performance Considerations
-  • The code uses synchronous Deno.readDirSync in certain places (e.g., the “dir” command) and asynchronous calls
-elsewhere. While this is acceptable for small directories, be mindful of performance if scaling up.
-  • The counter mechanism via the increment function relies on a global “roha.counters” object. In a multi-threaded or
-highly asynchronous environment, race conditions might occur; although in this CLI context it is likely safe.
-
-7. Security
-  • API keys are retrieved from environment variables which is good. Ensure that sensitive keys aren’t logged or
-exposed in error messages.
-  • When handling file uploads (especially in shareFile and commitShares), it may be useful to validate or sanitize
-file paths to avoid potential vulnerabilities in production use.
-
-8. Code Comments and Documentation
-  • The code includes several inline comments and a README/MD documentation, which is very helpful. A few functions
-could benefit from more detailed comments about their expected inputs, outputs, and side effects (for instance, what
-exactly is expected by callCommand).
-  • The usage instructions in foundry.md are clear and comprehensive.
-
-9. Sandbox Execution
-  • The “isolation” example (test.js) is straightforward. It demonstrates simple logging and a timestamp function. No
-issues were noted there.
-
-Overall, the code appears solid for a command line tool of this complexity. There aren’t any glaring bugs, but some
-refactoring and enhanced error handling / documentation could improve long-term maintainability and clarity.
-
-Let me know if you need more details on any specific part of the code or further suggestions!
-
-[model o3-mini-2025-01-31@openai 10304 1308 11858 45464]
+[model deepseek-chat@deepseek 15924 35 31833 52346]
+> what share id could these be?
+> /history
+0 system foundry - I am testing foundry client. You are a helpful assistant.
+1 user foundry - {"path":"C:/nitrologic/foundry/foundry.js","length":38969,"type":"application/javascript;
+2 user forge - // foundry.js // a research client for evaluating models // (c)2025 Simon Armstrong // den
+3 user foundry - {"path":"C:/nitrologic/foundry/foundry.md","length":3161,"type":"text/markdown; charset=UT
+4 user forge - # nitrologic foundry research tool A command line application designed to chat and share f
+5 user foundry - {"path":"C:/nitrologic/foundry/plan.txt","length":355,"type":"text/plain; charset=UTF-8","
+6 user forge - foundry roadmap plan credit and usage limits and management plans prepare rc2 of roha foun
+7 user foundry - {"path":"C:/nitrologic/foundry/foundry-tools.md","length":390,"type":"text/markdown; chars
+8 user forge -  ## appendix 1 foundry machine interface The foundry functional interface uses tools tool_
+9 user foundry - Please review source for bugs and all content if notable changes detected, thanks.
+10 assistant foundry -
+11 tool annotate_foundry - {"success":false,"updated":0}
+12 tool annotate_foundry - {"success":false,"updated":0}
+13 tool annotate_foundry - {"success":false,"updated":0}
+14 tool annotate_foundry - {"success":false,"updated":0}
+15 assistant foundry - It seems there was an issue annotating the files. The annotations were not updated success
+> share /foundry.log
+> /commit
+>
+onCall error - call simon
+Error during API call: Error: 400 An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id'. (insufficient tool messages following tool_calls message)
+    at APIError.generate (https://deno.land/x/openai@v4.67.2/error.ts:77:14)
+    at OpenAI.makeStatusError (https://deno.land/x/openai@v4.67.2/core.ts:498:21)
+    at OpenAI.makeRequest (https://deno.land/x/openai@v4.67.2/core.ts:580:24)
+    at eventLoopTick (ext:core/01_core.js:178:7)
+    at async relay (file:///C:/nitrologic/foundry/foundry.js:1257:22)
+    at async chat (file:///C:/nitrologic/foundry/foundry.js:1424:5)
+    at async file:///C:/nitrologic/foundry/foundry.js:1432:1 {
+  status: 400,
+  headers: {
+    "access-control-allow-credentials": "true",
+    "cf-cache-status": "DYNAMIC",
+    "cf-ray": "93163af2084197c5-SYD",
+    "content-length": "264",
+    "content-type": "application/json",
+    date: "Wed, 16 Apr 2025 19:53:41 GMT",
+    server: "cloudflare",
+    "set-cookie": "__cf_bm=nhAhrLlhRNCJh7mlKHTHgYjhTCvSHWfQRcV8ojxm9Rg-1744833221-1.0.1.1-4.4NuNsiFmOdRVrox_hd1BwMSQm0G4mG1_2fw6XQ7a9p8hMyyptDptPI.GKyCYtW2tLTs6ExqhmfAAIJDPS0KzRgu75nTZ08lum9DBgc2Ig; path=/; expires=Wed, 16-Apr-25 20:23:41 GMT; domain=.deepseek.com; HttpOnly; Secure; SameSite=None",
+    "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+    vary: "origin, access-control-request-method, access-control-request-headers",
+    "x-content-type-options": "nosniff",
+    "x-ds-trace-id": "95fa47fac3b7ce9bcf69206f5335aae7"
+  },
+  error: {
+    message: "An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id'. (insufficient tool messages following tool_calls message)",
+    type: "invalid_request_error",
+    param: null,
+    code: "invalid_request_error"
+  },
+  code: "invalid_request_error",
+  param: null,
+  type: "invalid_request_error",
+  request_id: undefined
+}
+Account deepseek debited $0.0043. New balance: $18.6012
+[model deepseek-chat@deepseek 15974 14 47821 52626]
+relay calls in progress
+no oncall result
+resetting grokFunctions
+>

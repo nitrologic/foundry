@@ -25,7 +25,8 @@ Default values are typically:
 * 5 broken : ansi background blocks : false
 * 6 logging : log all output to file : true
 * 7 resetcounters : factory reset when reset : false
-* 8 returntopush : hit return to /push - it is under test : false
+* 8 returntopush : experimental hit return to /push : false
+* 9 disorder : dangerous dos derangement : false
 
 ### /share
 

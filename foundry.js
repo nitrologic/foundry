@@ -8,7 +8,11 @@ import { contentType } from "https://deno.land/std@0.224.0/media_types/mod.ts";
 import { resolve } from "https://deno.land/std/path/mod.ts";
 import OpenAI from "https://deno.land/x/openai@v4.67.2/mod.ts";
 
-const foundryVersion = "rc1";
+const mut="Model Under Test";
+
+const emptyMUT = {notes:[],errors:[]}
+
+const foundryVersion = "rc2";
 const rohaTitle="foundry "+foundryVersion;
 const rohaMihi="I am testing foundry client. You are a helpful assistant.";
 
@@ -43,7 +47,9 @@ const flagNames={
 	logging : "log all output to file",
 	resetcounters : "factory reset when reset",
 	returntopush : "hit return to /push - under test",
-	rawPrompt : "experimental rawmode stdin deno prompt replacement"
+	rawPrompt : "experimental rawmode stdin deno prompt replacement",
+	disorder : "allow /dos command to run shell",
+	versioning : "allow multiple versions in share history"
 };
 
 const emptyRoha={
@@ -53,7 +59,7 @@ const emptyRoha={
 		saveonexit:false,
 		ansi:true,
 		slow:false,
-		verbose:false,
+		verbose:true,
 		broken:false,
 		logging:false,
 		resetcounters:false,
@@ -254,6 +260,14 @@ function echo(){
 	}
 }
 
+function debug(title,value){
+	echo(title);
+	if(roha.config.verbose){
+		let json=JSON.stringify(value);
+		echo(json);
+	}
+}
+
 function stripAnsi(text) {
 	return text.replace(/\x1B\[\d+(;\d+)*[mK]/g, '');
 }
@@ -396,13 +410,14 @@ async function specAccount(account){
 async function specModel(model,account){
 	let name=model.id+"@"+account;
 	let exists=name in roha.mut;
-	let info=exists?roha.mut[name]:{name,notes:[],relays:0,cost:0};
+	let info=exists?roha.mut[name]:{name,notes:[],errors:[],relays:0,cost:0};
 	info.id=model.id;
 	info.object=model.object;
 	info.created=model.created;
 	info.owner=model.owned_by;
 //	echo("statModel",name,JSON.stringify(model));
 	if (!info.notes) info.notes = [];
+	if (!info.errors) info.errors = [];
 	roha.mut[name]=info;
 }
 
@@ -507,6 +522,7 @@ const ansiReset = "\x1b[0m";
 const ansiPurple = "\x1b[1;35m";
 
 function mdToAnsi(md) {
+	let verbose=roha.config.verbose;
 	let broken=roha.config.broken;
 	const lines = md.split("\n");
 	let inCode = false;
@@ -519,10 +535,9 @@ function mdToAnsi(md) {
 			if(inCode){
 				result.push(ansiCodeBlock);
 				let codeType=trim.substring(3);
-				echo("inCode",codeType);
+				if(verbose&&codeType) echo("inCode codetype:",codeType,"line:",line);
 			}else{
 				if (broken) result.push(ansiReplyBlock);
-				echo("outCode");
 			}
 		}else{
 			if (!inCode) {
@@ -618,6 +633,24 @@ async function pipe(stream, tag) {
 	}
 }
 
+async function runDOS(args) {
+	if(!roha.config.disorder) return;
+	const shell = Deno.build.os === "windows" ? "cmd" : "bash";
+	const cmd = [shell, ...args.slice(1)];
+	echo(`Entering ${shell} (type 'exit' to return to Foundry)`);
+	await flush();
+	// Save current Foundry state
+	const prevRaw = Deno.stdin.isRaw;
+	Deno.stdin.setRaw(false);
+	// Start interactive shell
+	const p = Deno.run({cmd,stdin: "inherit",stdout: "inherit",stderr: "inherit"});
+	await p.status();
+	p.close();
+	// Restore Foundry
+	if(roha.config.rawPrompt) Deno.stdin.setRaw(true);
+	echo("Returned to Foundry");
+}
+
 async function runDeno(path, cwd) {
 	try {
 		const r = `--allow-read=${cwd}`;
@@ -656,7 +689,7 @@ async function spawnDeno(path, cwd) {
 async function runCode(){
 	let result = await runDeno("isolation/test.js", "isolation");
 	if (result.ok) {
-		echo("[isolation] runCode complete result:"+result.content);
+		echo("[isolation] runCode ran result:"+result.content);
 	} else {
 		echo("Error:", result.error);
 	}
@@ -969,6 +1002,9 @@ async function callCommand(command) {
 	let words = command.split(" ");
 	try {
 		switch (words[0]) {
+			case "dos":
+				await runDOS(words);
+				break;
 			case "forge":
 				onForge(words);
 				break;
@@ -1056,7 +1092,7 @@ async function callCommand(command) {
 					for(let i=0;i<modelList.length;i++){
 						let name=modelList[i];
 						let attr=(name==grokModel)?"*":" ";
-						let mut=(name in roha.mut)?roha.mut[name]:{notes:[]};
+						let mut=(name in roha.mut)?roha.mut[name]:emptyMUT;
 					    let flag = (mut.hasForge) ? "𝆑" : "";
 						let notes=mut.notes.join(" ");
 						echo(i,attr,name,flag,mut.relays|0,notes);
@@ -1161,7 +1197,8 @@ function extensionForType(contentType) {
 
 async function onCall(toolCall) {
 	let verbose=roha.config.verbose;
-	switch(toolCall.function.name) {
+	let name=toolCall.function.name;
+	switch(name) {
 		case "read_time":
 			return {time: new Date().toISOString()};
 		case "submit_file":
@@ -1191,10 +1228,14 @@ async function onCall(toolCall) {
 				return { success: true, updated: 1 };
 			} catch (error) {
 				echo("annotate_foundry error:",error);
-				return { success: false, updated: 0 };
 			}
-	}
-	console.error("onCall error - call simon");
+			return { success: false, updated: 0 };
+			break;
+		default:
+			echo("onCall unhandled function name:",name);
+			debug("toolCall",toolCall);
+			return { success: false, updated: 0 };
+		}
 }
 
 function squashMessages(history) {
@@ -1237,6 +1278,37 @@ async function isolateCode(path,cwd) {
 	} catch (err) {
 		return { success: false, output: "", error: err.message };
 	}
+}
+
+async function processToolCalls(calls) {
+	const results = [];
+	for (const tool of calls) {
+	  if (!tool.id || !tool.function?.name) {
+		results.push({
+		  tool_call_id: tool.id || "unknown",
+		  name: tool.function?.name || "unknown",
+		  content: JSON.stringify({error: "Invalid tool call format"})
+		});
+		await log(`Invalid tool call: ${JSON.stringify(tool)}`, "error");
+		continue;
+	  }
+	  try {
+		const result = await onCall(tool);
+		results.push({
+		  tool_call_id: tool.id,
+		  name: tool.function.name,
+		  content: JSON.stringify(result || {success: false})
+		});
+	  } catch (e) {
+		results.push({
+		  tool_call_id: tool.id,
+		  name: tool.function.name,
+		  content: JSON.stringify({error: e.message})
+		});
+		await log(`Tool call failed: ${tool.function.name} - ${e.message}`, "error");
+	  }
+	}
+	return results;
 }
 
 //echo("RunCode Result:", result.success ? "Success" : "Failed");
@@ -1300,7 +1372,7 @@ async function relay() {
 			// choice has index message{role,content,refusal,annotations} finish_reason
 			if (calls) {
 				increment("calls");
-				echo("relay calls in progress");
+				debug("relay calls in progress",calls)
 				// Generate tool_calls with simple, unique IDs
 				const toolCalls = calls.map((tool, index) => ({
 					id: `call_${rohaCalls++}`,
@@ -1313,22 +1385,15 @@ async function relay() {
 				// Add assistant message with tool_calls
 				let content=choice.message.content || "";
 				rohaHistory.push({role:"assistant",content,tool_calls: toolCalls});
-				if(verbose) echo("tooling "+content);
-				// Add tool responses
-				for (let i = 0; i < calls.length; i++) {
-					const tool = calls[i];
-					const result = await onCall(tool);
-					if (result){
-						let content=JSON.stringify(result);
-						rohaHistory.push({
-							role: "tool",
-							tool_call_id: toolCalls[i].id,
-							name: tool.function.name,
-							content
-						});
-					}else{
-						echo("no oncall result");
-					}
+				if(verbose) echo("tooling",calls.length);
+				const toolResults = await processToolCalls(calls);
+				for (const result of toolResults) {
+				  rohaHistory.push({
+					role: "tool",
+					tool_call_id: result.tool_call_id,
+					name: result.name,
+					content: result.content
+				  });
 				}
 				return relay(); // Recursive call to process tool results
 			}
