@@ -45,6 +45,7 @@ const flagNames={
 
 const emptyRoha={
 	config:{
+		showWelcome:false,
 		commitonstart:true,
 		saveonexit:false,
 		ansi:true,
@@ -383,8 +384,7 @@ async function resetModel(name){
 	grokModel=name;
 	grokFunctions=true;
 	rohaHistory.push({role:"system",content:"Model changed to "+name+"."});
-	let count=(name in roha.models)?"#"+roha.models[name].sessions:"???";
-	echo("with model",name,count,grokFunctions)
+	echo("resetModel name",name,count,grokFunctions);
 	await writeFoundry();
 }
 
@@ -622,44 +622,7 @@ const writer = Deno.stdout.writable.getWriter();
 
 var promptBuffer = new Uint8Array(0);
 
-async function prompt2(message) {
-	let chunks = [];
-	if (message) {
-		await writer.write(encoder.encode(message));
-		await writer.ready;
-	}
-	Deno.stdin.setRaw(true);
-	try {
-		while (true) {
-			const { value, done } = await reader.read();
-			if (done || !value) break;
-			for (const byte of value) {
-				if (byte === 0x7F || byte === 0x08) { // Backspace
-					if (chunks.length > 0) {
-						chunks.pop();
-						await writer.write(new Uint8Array([0x08, 0x20, 0x08]));
-					}
-				} else if (byte === 0x0A || byte === 0x0D) { // Enter
-					await writer.write(new Uint8Array([0x0D, 0x0A]));
-					const result = new TextDecoder().decode(new Uint8Array(chunks));
-					log(result, "stdin");
-					return result.trimEnd();
-				} else if (byte === 0x1b) { // Escape
-					await exitFoundry();
-					Deno.exit(0);
-				} else {
-					chunks.push(byte);
-					await writer.write(new Uint8Array([byte]));
-				}
-			}
-		}
-	} finally {
-		Deno.stdin.setRaw(false);
-	}
-	return "";
-}
-
-async function prompt4(message) {
+async function promptFoundry(message) {
 	let result = "";
 	if (message) {
 		await writer.write(encoder.encode(message));
@@ -713,61 +676,6 @@ async function prompt4(message) {
 		Deno.stdin.setRaw(false);
 	}
 	return result;
-}
-
-async function prompt3(message) {
-	if (message) {
-		await writer.write(encoder.encode(message));
-		await writer.ready;
-	}
-	Deno.stdin.setRaw(true);
-	try {
-		let result="";
-		let busy=true;
-		while (busy) {
-			const { value, done } = await reader.read();
-			if (done || !value) break;
-			var bytes=[];
-			for (const byte of value) {
-				if (byte === 0x7F || byte === 0x08) { // Backspace
-					if (promptBuffer.length > 0) {
-						promptBuffer = promptBuffer.slice(0, -1);
-						bytes.append([0x08, 0x20, 0x08]);
-					}
-				} else if (byte === 0x1b) { // Escape sequence
-					if(value.length==1){
-						await exitFoundry();
-						Deno.exit(0);
-					}
-					if(value.length==3){
-						if(value[1]==0xf4 && value[2]==0x50){
-							echo("F1");
-						}
-					}
-					break;
-				} else if (byte === 0x0A || byte === 0x0D) { // Enter key
-					bytes.concat([0x0D,0x0A]);
-					let line = decoder.decode(promptBuffer);
-					let n=line.length;
-					if(n>0) {promptBuffer = promptBuffer.slice(n);
-					result=line.trimEnd();
-					log(result,"stdin");
-					busy=false;
-				} else {
-					bytes.push(byte);
-					const buf = new Uint8Array(promptBuffer.length + 1);
-					buf.set(promptBuffer);
-					buf[promptBuffer.length] = byte;
-					promptBuffer = buf;
-				}
-			}
-			if (bytes.length) await writer.write(new Uint8Array(bytes));
-		}
-	}
-}finally {
-		Deno.stdin.setRaw(false);
-}
-return result;
 }
 
 // a work in progess file watcher
@@ -1088,7 +996,7 @@ async function callCommand(command) {
 					const filename = words.slice(1).join(" ");
 					const path = resolvePath(Deno.cwd(), filename);
 					const info = await Deno.stat(path);
-					const tag = await prompt2("Enter tag name (optional):");
+					const tag = await promptFoundry("Enter tag name (optional):");
 					if(info.isDirectory){
 						echo("Share directory path:",path);
 						await shareDir(path,tag);
@@ -1132,7 +1040,7 @@ echo("use /help for latest and exit to quit");
 echo("");
 
 let sessions=increment("sessions");
-if(sessions==0){
+if(sessions==0||roha.config.showWelcome){
 	let welcome=await Deno.readTextFile("welcome.txt");
 	echo(welcome);
 	await writeFoundry();
@@ -1342,14 +1250,14 @@ async function chat() {
 			await flush();
 			let line="";
 			if(listCommand){
-				line=await prompt2("#");
+				line=await promptFoundry("#");
 				if(line.length && !isNaN(line)){
 					let index=line|0;
 					await callCommand(listCommand+" "+index);
 				}
 				listCommand="";
 			}else{
-				line=await prompt2(rohaPrompt);
+				line=await promptFoundry(rohaPrompt);
 			}
 			if (line === '') {
 				if(roha.config.returntopush && !lines.length) {
