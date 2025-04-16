@@ -4,7 +4,11 @@ function hexDate(){
     return s.toString(16);
 }
 
-console.log("radio   live transmission");
+async function sleep(ms) {
+	await new Promise(function(resolve){setTimeout(resolve,ms);});
+}
 
+console.log("radio   live transmission");
 console.log(hexDate());
+await sleep(2e3);
 console.log(hexDate());

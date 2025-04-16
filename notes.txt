@@ -1,3 +1,13 @@
+recent crash
+
+>the note command has been tested, works well!
+>
+Error during API call: Error: 404 This is not a chat model and thus not supported in the v1/chat/completions endpoint. Did you mean to use v1/completions?
+    at APIError.generate (https://deno.land/x/openai@v4.67.2/error.ts:89:14)
+    at OpenAI.makeStatusError (https://deno.land/x/openai@v4.67.2/core.ts:498:21)
+
+    
+
 latest issues
 
 // no SIGBREAK on macos

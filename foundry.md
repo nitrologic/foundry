@@ -1,24 +1,8 @@
 # nitrologic foundry research tool
 
-A command line application designed to chat and share files.
+A command line application designed to chat and share files with models under test.
 
 Warning, models with tool support may write to the forge folder at any time.
-
-## foundry machine interface
-
-The foundry functional interface uses tools tool_calls and the "tool" role
-when config.tools enabled with config option.
-
-Only recent models provide tools interface, foundry should fall 
-back to a no tools completion mode.
-
-See the OpenAI API spec for more tool role details.
-
-### read_time
-
-### submit_file
-
-### annotate_foundry
 
 ## foundry user interface
 
@@ -130,3 +114,12 @@ Helps user verify system status.
 If you are reading this file, it may be due to the use of this command.
 
 If you still need help visit the project page.
+
+## foundry prompt report
+
+[model modelname promptTokens replyTokens totalTokens contextSize]
+
+* promptTokens used in the context - drop files to reduce
+* replyTokens used for completions - typically cost more
+* totalTokens a running total of tokens used
+* contextSize estimate in bytes of all files share

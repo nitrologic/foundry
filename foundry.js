@@ -14,6 +14,17 @@ const rohaMihi="I am testing foundry client. You are a helpful assistant.";
 
 const slowMillis = 20;
 
+// main roha application starts here
+
+const MaxFileSize=65536;
+
+const appDir = Deno.cwd();
+const rohaPath = resolve(appDir,"foundry.json");
+const accountsPath = resolve(appDir,"accounts.json");
+const forgePath=resolve(appDir,"forge");
+
+const modelAccounts = JSON.parse(await Deno.readTextFile(accountsPath));
+
 const decoder = new TextDecoder("utf-8");
 const encoder = new TextEncoder();
 
@@ -45,11 +56,11 @@ const emptyRoha={
 		returntopush:false
 	},
 	tags:{},
-	models:{},
 	band:{},
 	sharedFiles:[],
 	saves:[],
-	counters:{}
+	counters:{},
+	models:{}
 };
 
 async function exitFoundry(){
@@ -277,17 +288,6 @@ function wordWrap(text,cols=terminalColumns){
 	return result.join("\n");
 }
 
-// main roha application starts here
-
-const MaxFileSize=65536;
-
-const appDir = Deno.cwd();
-const rohaPath = resolve(appDir,"foundry.json");
-const accountsPath = resolve(appDir,"accounts.json");
-const forgePath=resolve(appDir,"forge");
-
-const modelAccounts = JSON.parse(await Deno.readTextFile(accountsPath));
-
 async function pathExists(path) {
 	try {
 		const stat = await Deno.stat(path);
@@ -305,6 +305,9 @@ if (!fileExists) {
 	await Deno.writeTextFile(rohaPath, JSON.stringify(emptyRoha));
 	echo("Created new",rohaPath);
 }
+
+echo(rohaTitle,"running from "+rohaPath);
+await readFoundry();
 
 const rohaAccount={};
 for(let account in modelAccounts){
@@ -346,33 +349,48 @@ async function connectAccount(account) {
 		for (const model of models.data) {
 			let name=model.id+"@"+account;
 			list.push(name);
-			if(verbose) echo("model - ",JSON.stringify(model,null,"\t"));
+// dont do this	if(verbose) echo("model - ",JSON.stringify(model,null,"\t"));
+			await statModel(model,account);
 		}
 		list.sort();
 		modelList=modelList.concat(list);
 		return endpoint;
 	}catch(error){
-	// Error: 429 "Your team ac0a3c9a-0e58-4e3c-badd-be853c027a7f has either used all available credits or 
-	// reached its monthly spending limit. To continue making API requests, please purchase more credits or 
+	// Error: 429 "Your team ac0a3c9a-0e58-4e3c-badd-be853c027a7f has either used all available credits or
+	// reached its monthly spending limit. To continue making API requests, please purchase more credits or
 	// raise your spending limit."
 		echo(error);
 	}
 	return null;
 }
 
+async function statModel(model,account){
+	let name=model.id+"@"+account;
+	let exists=name in roha.mut;
+	let info=exists?roha.mut[name]:{name,notes:[],sessions:0};
+	info.id=model.id;
+	info.object=model.object;
+	info.created=model.created;
+	info.owner=model.owned_by;
+//	echo("statModel",name,JSON.stringify(model));
+	if (!info.notes) info.notes = [];
+	roha.mut[name]=info;
+}
+
 async function resetModel(name){
 	grokModel=name;
 	grokFunctions=true;
 	rohaHistory.push({role:"system",content:"Model changed to "+name+"."});
-	echo("with model",name,grokFunctions)
-	await writeRoha();
+	let count=(name in roha.models)?"#"+roha.models[name].sessions:"???";
+	echo("with model",name,count,grokFunctions)
+	await writeFoundry();
 }
 
 function dropShares(){
 	for(let item of rohaHistory){
 		if(item && item.role==="user" && item.user==="forge"){
 			item.user="drop";
-			item.content="dropped path "+(item.path||"");			
+			item.content="dropped path "+(item.path||"");
 		}
 	}
 	rohaShares=[];
@@ -411,7 +429,7 @@ async function saveHistory(name) {
 		await Deno.writeTextFile(filePath,JSON.stringify(rohaHistory,null,"\t"));
 		echo(line);
 		roha.saves.push(filename);
-		await writeRoha();
+		await writeFoundry();
 	} catch (error) {
 		console.error("Error saving history:", error.message);
 	}
@@ -513,20 +531,21 @@ async function hashFile(filePath) {
 	return Array.from(hashArray).map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function readRoha(){
+async function readFoundry(){
 	try {
 		const fileContent = await Deno.readTextFile(rohaPath);
 		roha = JSON.parse(fileContent);
 		if(!roha.saves) roha.saves=[];
 		if(!roha.counters) roha.counters={};
 		if(!roha.band) roha.band={};
+		if(!roha.mut) roha.mut={};
 	} catch (error) {
 		console.error("Error reading or parsing",rohaPath,error);
 		roha=emptyRoha;
 	}
 }
 
-async function writeRoha(){
+async function writeFoundry(){
 	try {
 		roha.model=grokModel;
 		await Deno.writeTextFile(rohaPath, JSON.stringify(roha, null, "\t"));
@@ -541,7 +560,7 @@ async function resetRoha(){
 	roha.tags={};
 	if(roha.config.resetcounters) roha.counters={};
 	increment("resets");
-	await writeRoha();
+	await writeFoundry();
 	resetHistory();
 	echo("resetRoha","All shares and history reset.");
 }
@@ -552,14 +571,54 @@ function resolvePath(dir,filename){
 	return path;
 }
 
-// a raw mode prompt replacement
+// multi process model under test prompt replacement
 
+async function pipe(stream, tag) {
+	const raw = new Uint8Array(1024);
+	let buffer="";
+	while (true) {
+		const n = await stream.read(raw);
+		if (n === null) break;
+		buffer+=decoder.decode(raw.subarray(0,n));
+		echo("[" + tag + "]",buffer.trimEnd());
+		buffer="";
+		await flush();
+	}
+}
+
+async function runDeno(path, cwd) {
+	try {
+		const r = `--allow-read=${cwd}`;
+		const w = `--allow-write=${cwd}`;
+		const cmd = ["deno", "run", "--no-remote", r, w, path];
+		const p = Deno.run({ cmd, stdout: "piped", stderr: "piped" });
+		const a = pipe(p.stdout, "out");
+		const b = pipe(p.stderr, "err");
+		const c = p.status();
+		await Promise.all([a, b, c]);
+		p.close();
+		return { ok: true, content: "done" };
+	} catch (e) {
+		return { ok: false, error: e.message };
+	}
+}
+
+async function runCode(){
+	let result = await runDeno("isolation/test.js", "isolation");
+	if (result.ok) {
+		echo("[isolation] runCode complete result:"+result.content);
+	} else {
+		echo("Error:", result.error);
+	}
+}
+
+// a raw mode prompt replacement
 // arrow navigation and tab completion incoming
 
 const reader = Deno.stdin.readable.getReader();
 const writer = Deno.stdout.writable.getWriter();
 
-let inputBuffer = new Uint8Array(0);
+let promptBuffer = new Uint8Array(0);
 
 async function prompt2(message) {
 	if (message) {
@@ -573,8 +632,8 @@ async function prompt2(message) {
 			if (done || !value) break;
 			for (const byte of value) {
 				if (byte === 0x7F || byte === 0x08) { // Backspace
-					if (inputBuffer.length > 0) {
-						inputBuffer = inputBuffer.slice(0, -1);
+					if (promptBuffer.length > 0) {
+						promptBuffer = promptBuffer.slice(0, -1);
 						await writer.write(new Uint8Array([0x08, 0x20, 0x08])); // Erase last char
 					}
 				} else if (byte === 0x1b) { // Escape sequence
@@ -590,18 +649,18 @@ async function prompt2(message) {
 					break;
 				} else if (byte === 0x0A || byte === 0x0D) { // Enter key
 					await writer.write(encoder.encode("\r\n"));
-					let line = decoder.decode(inputBuffer);
+					let line = decoder.decode(promptBuffer);
 					let n=line.length;
-					if(n>0) inputBuffer = inputBuffer.slice(n);					
+					if(n>0) promptBuffer = promptBuffer.slice(n);
 					line=line.trimEnd();
 					log(line,"stdin");
 					return line;
 				} else {
 					await writer.write(new Uint8Array([byte]));
-					const buf = new Uint8Array(inputBuffer.length + 1);
-					buf.set(inputBuffer);
-					buf[inputBuffer.length] = byte;
-					inputBuffer = buf;
+					const buf = new Uint8Array(promptBuffer.length + 1);
+					buf.set(promptBuffer);
+					buf[promptBuffer.length] = byte;
+					promptBuffer = buf;
 				}
 			}
 		}
@@ -610,7 +669,8 @@ async function prompt2(message) {
 	}
 }
 
-// callers to addShare expected to await writeRoha after
+// a work in progess file watcher
+// callers to addShare expected to await writeFoundry after
 
 const eventList=[];
 
@@ -646,7 +706,7 @@ async function shareDir(dir,tag) {
 			const hash = await hashFile(path);
 			await addShare({path,size,modified,hash,tag})
 		}
-		await writeRoha(); // TODO: check a dirty flag
+		await writeFoundry(); // TODO: check a dirty flag
 	} catch (error) {
 		console.error("### Error"+error);
 	}
@@ -657,7 +717,7 @@ function fileType(extension){
 }
 
 const textExtensions = [
-	"js", "txt", "json", "md",
+	"js", "ts", "txt", "json", "md",
 	"css","html", "svg",
 	"cpp", "c", "h", "cs",
 	"sh", "bat",
@@ -730,7 +790,7 @@ async function commitShares(tag) {
 
 	if (removedPaths.length) {
 		roha.sharedFiles = validShares;
-		await writeRoha();
+		await writeFoundry();
 		echo(`Invalid shares detected:\n${removedPaths.join('\n')}`);
 	}
 
@@ -748,7 +808,7 @@ async function setTag(name,note){
 	tag.info.push(note);
 	tags[name]=tag;
 	roha.tags=tags;
-	await writeRoha();
+	await writeFoundry();
 //	let invoke=`New tag "${name}" added. Describe all shares with this tag.`;
 //	rohaHistory.push({role:"system",content:invoke});
 }
@@ -802,7 +862,7 @@ function readable(text){
 
 async function callCommand(command) {
 	let dirty=false;
-	let words = command.split(" ",2);
+	let words = command.split(" ");
 	try {
 		switch (words[0]) {
 			case "band":
@@ -830,7 +890,7 @@ async function callCommand(command) {
 					if(flag in flagNames){
 						roha.config[flag]=!roha.config[flag];
 						echo(flag+" - "+flagNames[flag]+" is "+(roha.config[flag]?"true":"false"));
-						await writeRoha();
+						await writeFoundry();
 					}
 				}else{
 					let count=0;
@@ -863,6 +923,21 @@ async function callCommand(command) {
 				let savename=words.slice(1).join(" ");
 				await saveHistory(savename);
 				break;
+			case "note":
+				if(grokModel in roha.mut){
+					let mut=roha.mut[grokModel];
+					let note=words.slice(1).join(" ");
+					if(note.length){
+						mut.notes.push(note);
+						await writeFoundry();
+					}else{
+						let n=mut.notes.length;
+						for(let i=0;i<n;i++){
+							echo(i,mut.notes[i]);
+						}
+					}
+				}
+				break;
 			case "model":
 				let name=words[1];
 				if(name){
@@ -874,7 +949,8 @@ async function callCommand(command) {
 					for(let i=0;i<modelList.length;i++){
 						let name=modelList[i];
 						let attr=(name==grokModel)?"*":"";
-						echo(i,name,attr);
+						let mut=(name in roha.mut)?roha.mut[name]:"";
+						echo(i,name,attr,mut.sessions);
 					}
 					listCommand="model";
 				}
@@ -900,7 +976,7 @@ async function callCommand(command) {
 				break;
 			case "drop":
 				dropShares();
-				await writeRoha();
+				await writeFoundry();
 				break;
 			case "share":
 				if (words.length==1){
@@ -921,7 +997,7 @@ async function callCommand(command) {
 						echo("hash:",hash);
 						await addShare({path,size,modified,hash,tag});
 					}
-					await writeRoha();
+					await writeFoundry();
 				}
 				break;
 			case "push":
@@ -943,9 +1019,6 @@ async function callCommand(command) {
 	return dirty;
 }
 
-echo(rohaTitle,"running from "+rohaPath);
-await readRoha();
-
 let grokModel = roha.model||"deepseek-chat@deepseek";
 let grokFunctions=true;
 let grokUsage = 0;
@@ -959,7 +1032,7 @@ let sessions=increment("sessions");
 if(sessions==0){
 	let welcome=await Deno.readTextFile("welcome.txt");
 	echo(welcome);
-	await writeRoha();
+	await writeFoundry();
 }
 
 if(roha.config){
@@ -972,6 +1045,7 @@ function extensionForType(contentType) {
 	if (contentType.includes("markdown")) return ".md";
 	if (contentType.includes("json")) return ".json";
 	if (contentType.includes("javascript")) return ".js";
+	if (contentType.includes("typescript")) return ".ts";
 	return ".txt";
 }
 
@@ -1002,7 +1076,7 @@ async function onCall(toolCall) {
 						annotateShare(name,description);
 						break;
 				}
-				await writeRoha(); // Persist changes
+				await writeFoundry(); // Persist changes
 				return { success: true, updated: 1 };
 			} catch (error) {
 				echo("annotate_foundry error:",error);
@@ -1054,13 +1128,11 @@ async function isolateCode(path,cwd) {
 	}
 }
 
-async function runCode(){
-	let result = await isolateCode("isolation/test.js", "isolation");
-	//echo("RunCode Result:", result.success ? "Success" : "Failed");
-	if (result.output) echo("[isolation] ", result.output);
-	if (result.error) echo("Error:", result.error);
-	// todo: add save on exit
-}
+//echo("RunCode Result:", result.success ? "Success" : "Failed");
+//	if (result.output) echo("[isolation] ", result.output);
+//	if (result.error) echo("Error:", result.error);
+// todo: add save on exit
+//}
 
 async function relay() {
 	const verbose=roha.config.verbose;
@@ -1140,7 +1212,7 @@ async function relay() {
 			echo("maximum prompt length exceeded, switch model or drop shares to continue");
 			return;
 		}
-		console.error("Error during API call:", error);	
+		console.error("Error during API call:", error);
 		if(grokFunctions){
 			echo("resetting grokFunctions")
 			grokFunctions=false;
