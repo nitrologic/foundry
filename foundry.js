@@ -535,7 +535,7 @@ function mdToAnsi(md) {
 			if(inCode){
 				result.push(ansiCodeBlock);
 				let codeType=trim.substring(3);
-				if(verbose&&codeType) echo("inCode codetype:",codeType,"line:",line);
+				if(verbose&&codeType) print("inCode codetype:",codeType,"line:",line);
 			}else{
 				if (broken) result.push(ansiReplyBlock);
 			}
@@ -1416,8 +1416,6 @@ async function relay() {
 		}
 		//Error during API call: Error: 400 deepseek-reasoner does not support Function Calling
 		if(grokFunctions){
-			echo("resetting grokFunctions")
-			grokFunctions=false;
 			if(line.includes("does not support Function Calling")){
 				if(grokModel in roha.mut) {
 					echo("mut",grokModel,"noFunctions",true);
@@ -1425,11 +1423,14 @@ async function relay() {
 					await writeFoundry();
 				}
 			}
+			echo("resetting grokFunctions")
+			grokFunctions=false;
 		}
 		//Error during API call: Error: 400 This model's maximum context length is 65536 tokens.
 		// However, you requested 77439 tokens (77439 in the messages, 0 in the completion).
 		// // Please reduce the length of the messages or completion.
-		console.error("Error during API call:", error);
+		let lines=error.split("\n");
+		echo("API error:", lines[0]);
 	}
 }
 

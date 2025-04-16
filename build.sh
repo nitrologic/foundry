@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIR="rc2"
-DEPENDENCIES=("README.md" "LICENSE.txt" "foundry.md" "welcome.txt" "accounts.json" "rates.json" "forge/readme.txt")
+DEPENDENCIES=("README.md" "LICENSE.txt" "foundry.md" "welcome.txt" "accounts.json" "rates.json" "forge/readme.txt" "isolation/readme.txt" "isolation/test.js")
 FOUNDRY_SRC="/Users/simon/nitro/foundry/foundry.js"
 
 if [ ! -f "$FOUNDRY_SRC" ]; then
