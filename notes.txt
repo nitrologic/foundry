@@ -1,3 +1,6 @@
+RC1 had no rules.txt!
+
+
 recent crash
 
 >the note command has been tested, works well!

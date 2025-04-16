@@ -618,23 +618,82 @@ async function runCode(){
 const reader = Deno.stdin.readable.getReader();
 const writer = Deno.stdout.writable.getWriter();
 
-let promptBuffer = new Uint8Array(0);
+var promptBuffer = new Uint8Array(0);
 
 async function prompt2(message) {
+	let result = "";
 	if (message) {
 		await writer.write(encoder.encode(message));
 		await writer.ready;
 	}
 	Deno.stdin.setRaw(true);
 	try {
-		while (true) {
+		let busy = true;
+		while (busy) {
 			const { value, done } = await reader.read();
 			if (done || !value) break;
+			var bytes = [];
 			for (const byte of value) {
 				if (byte === 0x7F || byte === 0x08) { // Backspace
 					if (promptBuffer.length > 0) {
 						promptBuffer = promptBuffer.slice(0, -1);
-						await writer.write(new Uint8Array([0x08, 0x20, 0x08])); // Erase last char
+						bytes.push(0x08, 0x20, 0x08);
+					}
+				} else if (byte === 0x1b) { // Escape sequence
+					if (value.length === 1) {
+						await exitFoundry();
+						Deno.exit(0);
+					}
+					if (value.length === 3) {
+						if (value[1] === 0xf4 && value[2] === 0x50) {
+							echo("F1");
+						}
+					}
+					break;
+				} else if (byte === 0x0A || byte === 0x0D) { // Enter key
+					bytes.push(0x0D, 0x0A);
+					let line = decoder.decode(promptBuffer);
+					let n = line.length;
+					if (n > 0) {
+						promptBuffer = promptBuffer.slice(n);
+					}
+					result = line.trimEnd();
+					log(result, "stdin");
+					busy = false;
+				} else {
+					bytes.push(byte);
+					const buf = new Uint8Array(promptBuffer.length + 1);
+					buf.set(promptBuffer);
+					buf[promptBuffer.length] = byte;
+					promptBuffer = buf;
+				}
+			}
+			if (bytes.length) await writer.write(new Uint8Array(bytes));
+		}
+	} finally {
+		Deno.stdin.setRaw(false);
+	}
+	return result;
+}
+
+async function prompt3(message) {
+	if (message) {
+		await writer.write(encoder.encode(message));
+		await writer.ready;
+	}
+	Deno.stdin.setRaw(true);
+	try {
+		let result="";
+		let busy=true;
+		while (busy) {
+			const { value, done } = await reader.read();
+			if (done || !value) break;
+			var bytes=[];
+			for (const byte of value) {
+				if (byte === 0x7F || byte === 0x08) { // Backspace
+					if (promptBuffer.length > 0) {
+						promptBuffer = promptBuffer.slice(0, -1);
+						bytes.append([0x08, 0x20, 0x08]);
 					}
 				} else if (byte === 0x1b) { // Escape sequence
 					if(value.length==1){
@@ -648,25 +707,28 @@ async function prompt2(message) {
 					}
 					break;
 				} else if (byte === 0x0A || byte === 0x0D) { // Enter key
-					await writer.write(encoder.encode("\r\n"));
+					bytes.concat([0x0D,0x0A]);
 					let line = decoder.decode(promptBuffer);
 					let n=line.length;
-					if(n>0) promptBuffer = promptBuffer.slice(n);
-					line=line.trimEnd();
-					log(line,"stdin");
-					return line;
+					if(n>0) {promptBuffer = promptBuffer.slice(n);
+					result=line.trimEnd();
+					log(result,"stdin");
+					busy=false;
 				} else {
-					await writer.write(new Uint8Array([byte]));
+					bytes.push(byte);
 					const buf = new Uint8Array(promptBuffer.length + 1);
 					buf.set(promptBuffer);
 					buf[promptBuffer.length] = byte;
 					promptBuffer = buf;
 				}
 			}
+			if (bytes.length) await writer.write(new Uint8Array(bytes));
 		}
-	} finally {
-		Deno.stdin.setRaw(false);
 	}
+}finally {
+		Deno.stdin.setRaw(false);
+}
+return result;
 }
 
 // a work in progess file watcher
@@ -948,9 +1010,10 @@ async function callCommand(command) {
 				}else{
 					for(let i=0;i<modelList.length;i++){
 						let name=modelList[i];
-						let attr=(name==grokModel)?"*":"";
+						let attr=(name==grokModel)?"*":" ";
 						let mut=(name in roha.mut)?roha.mut[name]:"";
-						echo(i,name,attr,mut.sessions);
+					    let flag = (mut.canForge) ? "𝆑" : "";
+						echo(i,attr,name,flag,mut.sessions);
 					}
 					listCommand="model";
 				}
@@ -1155,6 +1218,13 @@ async function relay() {
 		let usage = completion.usage;
 		let size = measure(rohaHistory);
 		grokUsage += usage.prompt_tokens | 0 + usage.completion_tokens | 0;
+		if(grokModel in roha.mut){
+			let mut=roha.mut[grokModel];
+			if(usetools && mut.canForge!==true){
+				mut.canForge=true;
+				await writeFoundry();
+			}
+		}
 		let status = "[model " + grokModel + " " + usage.prompt_tokens + " " + usage.completion_tokens + " " + grokUsage + " " + size + "]";
 		echo(status);
 		var reply = "<blank>";
