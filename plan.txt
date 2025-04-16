@@ -1,11 +1,10 @@
 foundry roadmap
 
-prepare rc1 of roha foundry
+plan credit and usage limits and management plans
+prepare rc2 of roha foundry
 testing annotation and file tool
-autosave on exit
 auto dump on file change
 fix black text on dark background in light mode terminals
-sharedFiles [] => {} to avoid duplicants
 command auto complete 
 up down arrow key triggers
 a code command that lists previous code blocks

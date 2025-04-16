@@ -35,7 +35,7 @@ Files are added to the share list used by the /push /commit command.
 
 ### /drop
 
-Drop all files currently shared
+Drop all files currently shared, reduce the context and save tokens.
 
 ### /push /commit
 
@@ -67,16 +67,18 @@ List the contents of the current working directory.
 
 Helps user view available files and folders to share.
 
-
 ### /model
 
 Select an AI model.
 
 User can choose a model by name or index from the accounts available.
 
-### /counters
 
-List the internal application counters.
+### /note
+
+Attach a note to the current model under test.
+
+Annotate the model under test with notes and observations.
 
 ### /tag
 
@@ -84,9 +86,21 @@ Describe all tags in use.
 
 Displays tag name, count of shares tagged and description.
 
-### /account
+### /counter
+
+List the internal application counters.
+
+### /credit
 
 Display current account information.
+
+Select an account to adjust credits or view details.
+
+### /forge
+
+List all artifacts saved to the forge directory.
+
+Select file to request Operating System open.
 
 ### /save [name]
 

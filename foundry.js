@@ -516,9 +516,10 @@ function mdToAnsi(md) {
 			if(inCode){
 				result.push(ansiCodeBlock);
 				let codeType=trim.substring(3);
-				echo("inCode "+codeType);
+				echo("inCode",codeType);
 			}else{
 				if (broken) result.push(ansiReplyBlock);
+				echo("outCode");
 			}
 		}else{
 			if (!inCode) {
@@ -628,6 +629,24 @@ async function runDeno(path, cwd) {
 		return { ok: true, content: "done" };
 	} catch (e) {
 		return { ok: false, error: e.message };
+	}
+}
+
+// dream on gpt-4.1...
+async function spawnDeno(path, cwd) {
+	try{
+		const cmd = ["deno", "run", "--no-remote", `--allow-read=${cwd}`, `--allow-write=${cwd}`, path];
+		const proc = await Deno.spawn(cmd, { stdout: "piped", stderr: "piped" });
+		const a = pipe(proc.stdout, "out");
+		const b = pipe(proc.stderr, "err");
+		const c = proc.status;
+		await Promise.all([a, b, c]);
+		proc.stdout.close();
+		proc.stderr.close();
+		proc.close();
+		return {ok:true,content:"done"};
+	}catch(error){
+		return {ok:false,error};
 	}
 }
 
