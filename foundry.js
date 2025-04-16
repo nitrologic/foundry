@@ -21,9 +21,11 @@ const MaxFileSize=65536;
 const appDir = Deno.cwd();
 const rohaPath = resolve(appDir,"foundry.json");
 const accountsPath = resolve(appDir,"accounts.json");
+const ratesPath=resolve(appDir,"rates.json");
 const forgePath=resolve(appDir,"forge");
 
 const modelAccounts = JSON.parse(await Deno.readTextFile(accountsPath));
+const modelRates = JSON.parse(await Deno.readTextFile(ratesPath));
 
 const decoder = new TextDecoder("utf-8");
 const encoder = new TextEncoder();
@@ -82,7 +84,7 @@ async function exitFoundry(){
 }
 
 function price(credit){
-	return "$"+(credit/100).toFixed(2);
+	return "$"+credit.toFixed(4);
 }
 
 function addBand(){
@@ -394,7 +396,7 @@ async function specAccount(account){
 async function specModel(model,account){
 	let name=model.id+"@"+account;
 	let exists=name in roha.mut;
-	let info=exists?roha.mut[name]:{name,notes:[],sessions:0};
+	let info=exists?roha.mut[name]:{name,notes:[],sessions:0,cost:0};
 	info.id=model.id;
 	info.object=model.object;
 	info.created=model.created;
@@ -408,7 +410,8 @@ async function resetModel(name){
 	grokModel=name;
 	grokFunctions=true;
 	rohaHistory.push({role:"system",content:"Model changed to "+name+"."});
-	echo("resetModel name",name,grokFunctions);
+	let rates=(name in modelRates)?modelRates[name]:[0,0];
+	echo("model:",name,"tool",grokFunctions,"rates",rates[0].toFixed(2)+","+rates[1].toFixed(2));
 	await writeFoundry();
 }
 
@@ -910,12 +913,11 @@ function onForge(args){
 }
 
 async function creditAccount(credit,account){
-	echo("creditAccount",account,"credit",price(credit));
-	let amount=Number(credit)*100|0;
+	let amount=Number(credit);
 	if(account in roha.lode){
 		let lode=roha.lode[account];
 		lode.credit=amount;
-		echo("creditAccount",price(credit),account,"balance",price(lode.credit));
+		if(roha.verbose) echo("creditAccount",price(amount),account,"balance",price(lode.credit));
 		await writeFoundry();
 	}
 }
@@ -1263,12 +1265,23 @@ async function relay() {
 		let system = completion.system_fingerprint;
 		let usage = completion.usage;
 		let size = measure(rohaHistory);
-		let cost=[usage.prompt_tokens | 0,usage.completion_tokens | 0];
-		grokUsage += cost[0]+cost[1];
+		let spent=[usage.prompt_tokens | 0,usage.completion_tokens | 0];
+		grokUsage += spent[0]+spent[1];
 		if(grokModel in roha.mut){
 			let mut=roha.mut[grokModel];
-			mut.prompt_tokens=(mut.prompt_tokens|0)+cost[0];
-			mut.completion_tokens=(mut.completion_tokens|0)+cost[1];
+			if(grokModel in modelRates){
+				let rates=modelRates[grokModel];
+				let spend=spent[0]*rates[0]/1e6+spent[1]*rates[1]/1e6;
+				mut.cost+=spend;
+				let lode = roha.lode[account];
+				if(lode && typeof lode.credit === "number") {
+					lode.credit-=spend;
+					echo(`Account ${account} debited $${spend.toFixed(4)}. New balance: $${(lode.credit).toFixed(4)}`);
+				}
+				await writeFoundry();
+			}
+			mut.prompt_tokens=(mut.prompt_tokens|0)+spent[0];
+			mut.completion_tokens=(mut.completion_tokens|0)+spent[1];
 			if(usetools && mut.hasForge!==true){
 				mut.hasForge=true;
 				await writeFoundry();
@@ -1331,10 +1344,22 @@ async function relay() {
 			echo("maximum prompt length exceeded, switch model or drop shares to continue");
 			return;
 		}
-		console.error("Error during API call:", error);
+		//Error during API call: Error: 400 deepseek-reasoner does not support Function Calling
 		if(grokFunctions){
 			echo("resetting grokFunctions")
 			grokFunctions=false;
+			if(line.includes("does not support Function Calling")){
+				if(grokModel in roha.mut) {
+					echo("mut",grokModel,"noFunctions",true);
+					roha.mut[grokModel].noFunctions=true;
+					await writeFoundry();
+				}
+			}
+		}else{
+			//Error during API call: Error: 400 This model's maximum context length is 65536 tokens.
+			// However, you requested 77439 tokens (77439 in the messages, 0 in the completion).
+			// // Please reduce the length of the messages or completion.
+			console.error("Error during API call:", error);
 		}
 	}
 }
