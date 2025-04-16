@@ -1,3 +1,19 @@
+git diff --stat HEAD@{05:00}
+
+C:\nitrologic\foundry>git diff --stat HEAD@{05:00}
+ .gitignore                |   2 +
+ README.md                 |  14 +-
+ forge/tokens to burn.json | 150 ++++++++++++++++++
+ foundry-tools.md          |  17 +++
+ foundry.js                | 382 +++++++++++++++++++++++++++++++++-------------
+ foundry.md                |  50 +++---
+ isolation/test.js         |   6 +-
+ notes.txt                 |  90 +++++++++++
+ run.bat                   |   4 +-
+ 9 files changed, 579 insertions(+), 136 deletions(-)
+
+ 
+
 [model gpt-4.1-2025-04-14@openai 25911 338 102105 95453]
 >first, is there a chance vscode is escaping this line , there is a bunch of italics in this block, which is possibly a foundry issue
 > If you want the assistant (me) to analyze git commit logs from those files:*
