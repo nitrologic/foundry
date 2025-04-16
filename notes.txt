@@ -1,3 +1,16 @@
+1. the drop command instant quits!
+
+2. new crash hard to reproduce:
+
+10 rawPrompt : experimental rawmode stdin deno prompt replacement : false
+# 
+error: Uncaught (in promise) TypeError: Cannot read properties of null (reading 'length')
+                                if(line.length && !isNaN(line)){
+
+new rates feature is proving difficult to test, 
+
+other stuf...
+
 git diff --stat HEAD@{05:00}
 
 C:\nitrologic\foundry>git diff --stat HEAD@{05:00}

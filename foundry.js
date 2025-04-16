@@ -396,7 +396,7 @@ async function specAccount(account){
 async function specModel(model,account){
 	let name=model.id+"@"+account;
 	let exists=name in roha.mut;
-	let info=exists?roha.mut[name]:{name,notes:[],sessions:0,cost:0};
+	let info=exists?roha.mut[name]:{name,notes:[],relays:0,cost:0};
 	info.id=model.id;
 	info.object=model.object;
 	info.created=model.created;
@@ -1059,7 +1059,7 @@ async function callCommand(command) {
 						let mut=(name in roha.mut)?roha.mut[name]:{notes:[]};
 					    let flag = (mut.hasForge) ? "𝆑" : "";
 						let notes=mut.notes.join(" ");
-						echo(i,attr,name,flag,mut.sessions,notes);
+						echo(i,attr,name,flag,mut.relays|0,notes);
 					}
 					listCommand="model";
 				}
@@ -1269,6 +1269,7 @@ async function relay() {
 		grokUsage += spent[0]+spent[1];
 		if(grokModel in roha.mut){
 			let mut=roha.mut[grokModel];
+			mut.relays = (mut.relays || 0) + 1;
 			if(grokModel in modelRates){
 				let rates=modelRates[grokModel];
 				let spend=spent[0]*rates[0]/1e6+spent[1]*rates[1]/1e6;
@@ -1279,6 +1280,10 @@ async function relay() {
 					echo(`Account ${account} debited $${spend.toFixed(4)}. New balance: $${(lode.credit).toFixed(4)}`);
 				}
 				await writeFoundry();
+			}else{
+				if(roha.verbose){
+					echo("modelRates not found for",grokModel);
+				}
 			}
 			mut.prompt_tokens=(mut.prompt_tokens|0)+spent[0];
 			mut.completion_tokens=(mut.completion_tokens|0)+spent[1];
@@ -1355,12 +1360,11 @@ async function relay() {
 					await writeFoundry();
 				}
 			}
-		}else{
-			//Error during API call: Error: 400 This model's maximum context length is 65536 tokens.
-			// However, you requested 77439 tokens (77439 in the messages, 0 in the completion).
-			// // Please reduce the length of the messages or completion.
-			console.error("Error during API call:", error);
 		}
+		//Error during API call: Error: 400 This model's maximum context length is 65536 tokens.
+		// However, you requested 77439 tokens (77439 in the messages, 0 in the completion).
+		// // Please reduce the length of the messages or completion.
+		console.error("Error during API call:", error);
 	}
 }
 
@@ -1396,6 +1400,7 @@ async function chat() {
 				}
 				break;
 			}
+			if(!line) break;//simon was here
 			if (line === "exit") {
 				echo("Ending the conversation...");
 				break dance;
