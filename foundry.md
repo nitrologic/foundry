@@ -13,20 +13,21 @@ the items displayed
 
 Toggle configuration flags.
 
-Adjust settings to suit current preferences.
-
 Default values are typically:
 
 * 0 commitonstart : commit shared files on start : true
-* 1 tools : enable model tool interface : false
-* 2 ansi : markdown ANSI rendering : true
-* 3 slow : output at reading speed : true
-* 4 verbose : emit debug information : false
-* 5 broken : ansi background blocks : false
-* 6 logging : log all output to file : true
-* 7 resetcounters : factory reset when reset : false
-* 8 returntopush : experimental hit return to /push : false
-* 9 disorder : dangerous dos derangement : false
+* 1 saveonexit :  save conversation history on exit : true
+* 2 tools : enable model tool interface : true
+* 3 ansi : markdown ANSI rendering : true
+* 4 slow : output at reading speed : true
+* 5 verbose : emit debug information : false
+* 6 broken : ansi background blocks : false
+* 7 logging : log all output to file : true
+* 8 resetcounters : factory reset when reset : false
+* 9 returntopush : hit return to /push - under test : false
+* 10 rawPrompt : experimental rawmode stdin deno prompt replacement : false
+* 11 disorder : allow /dos command to run shell : false
+* 12 versioning : allow multiple versions in share history : false
 
 ### /share
 
@@ -34,9 +35,13 @@ Share a file or folder with optional tag.
 
 Files are added to the share list used by the /push /commit command.
 
+A * signifies file share is included in current context.
+
 ### /drop
 
 Drop all files currently shared, reduce the context and save tokens.
+
+Work in progress, see /reset for a simple alternative.
 
 ### /push /commit
 
@@ -68,18 +73,27 @@ List the contents of the current working directory.
 
 Helps user view available files and folders to share.
 
+## Model Under Test
+
 ### /model
 
 Select an AI model.
 
 User can choose a model by name or index from the accounts available.
 
-
 ### /note
 
 Attach a note to the current model under test.
 
 Annotate the model under test with notes and observations.
+
+## experimental
+
+### /dos
+
+Begin a session with host Operating System shell.
+
+## tags
 
 ### /tag
 
@@ -122,7 +136,8 @@ User can specify a save index or file name to restore previous chats.
 
 Display the current system time. 
 
-Helps user verify system status.
+To invoke a tool_call response prompt model for current time.
+
 
 ### /help
 

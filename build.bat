@@ -1,7 +1,10 @@
 @echo off
 
 set DIR=rc2
-set DEPENDENCIES=foundry.js README.md LICENSE.txt foundry.md welcome.txt accounts.json rates.json forge\readme.txt
+
+set CORE=README.md LICENSE.txt foundry.md welcome.txt accounts.json rates.json 
+set EXTRAS=isolation\readme.txt isolation\test.js forge\readme.txt
+set DEPENDENCIES=%CORE% %EXTRAS%
 
 if not exist "foundry.js" (
 	echo Error: foundry.js not found in the current directory.

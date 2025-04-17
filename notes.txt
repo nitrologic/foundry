@@ -1,12 +1,35 @@
+rc2 testing going well
+
+assistant - does this look like an issue or expected behavior?
+
+Account deepseek debited $0.0057. New balance: $18.0335
+[model deepseek-chat@deepseek 18350 662 52784 60542]
+>what time is it?
+>
+relay calls in progress
+The current time is 2025-04-17T00:58:41.132Z (UTC). Let me know if you'd like this formatted differently or
+need further assistance!
+
+Account deepseek debited $0.0052. New balance: $18.0283
+[model deepseek-chat@deepseek 19020 14 71818 63376]
+Account deepseek debited $0.0052. New balance: $18.0231
+[model deepseek-chat@deepseek 19058 39 90915 63693]
+>
+
+
+
+
 rc2 errors from tool_calls and others should be improved, 
 
 verbose does not mean full diagnostics
 
 rc2 build stuff
 
-Since your binary is unsigned, users may see a Gatekeeper warning like: “foundry cannot be opened because it is from an unidentified developer.” They’ll need to manually allow it via System Settings > Privacy & Security or by right-clicking and selecting “Open” twice, which can be a hassle and deter less technical users
-
-
+Since your binary is unsigned, users may see a Gatekeeper warning like: 
+“foundry cannot be opened because it is from an unidentified developer.” 
+They’ll need to manually allow it via System Settings > Privacy & Security 
+or by right-clicking and selecting “Open” twice, which can be a hassle 
+and deter less technical users
 
 deepseek crash
 

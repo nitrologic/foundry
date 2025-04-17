@@ -37,6 +37,7 @@ const encoder = new TextEncoder();
 const terminalColumns=120;
 
 const flagNames={
+	pushonshare : "emit a /push after any /share",
 	commitonstart : "commit shared files on start",
 	saveonexit : " save conversation history on exit",
 	tools : "enable model tool interface",
@@ -124,9 +125,11 @@ function annotateTag(name,description){
 
 function annotateShare(name,description){
 	let index=roha.sharedFiles.findIndex(item => item.id === name);
-	if(index==-1) throw("share id not found");
+	if(index==-1) {
+		throw("annotateShare name not found "+name);
+	}
 	roha.sharedFiles[index].description=description;
-	echo("file share description annotated");
+	echo("annotateShare annotated file share",name);
 }
 
 function increment(key){
@@ -261,7 +264,7 @@ function echo(){
 }
 
 function debug(title,value){
-	echo(title);
+	print(title);
 	if(roha.config.verbose){
 		let json=JSON.stringify(value);
 		echo(json);
@@ -639,15 +642,12 @@ async function runDOS(args) {
 	const cmd = [shell, ...args.slice(1)];
 	echo(`Entering ${shell} (type 'exit' to return to Foundry)`);
 	await flush();
-	// Save current Foundry state
-	const prevRaw = Deno.stdin.isRaw;
+	const oldRaw = Deno.stdin.isRaw;
 	Deno.stdin.setRaw(false);
-	// Start interactive shell
 	const p = Deno.run({cmd,stdin: "inherit",stdout: "inherit",stderr: "inherit"});
 	await p.status();
 	p.close();
-	// Restore Foundry
-	if(roha.config.rawPrompt) Deno.stdin.setRaw(true);
+	Deno.stdin.setRaw(oldRaw);
 	echo("Returned to Foundry");
 }
 
@@ -854,6 +854,10 @@ async function shareFile(path,tag) {
 	}
 //	if(roha.config.verbose)echo("roha shared file " + path);
 	if (!rohaShares.includes(path)) rohaShares.push(path);
+
+	if (roha.config.pushonshare) {
+		await commitShares(tag);
+	}
 }
 
 async function commitShares(tag) {
@@ -1112,8 +1116,9 @@ async function callCommand(command) {
 				echo("Changed directory to", currentDir);
 				break;
 			case "dir":
-				const files = Deno.readDirSync(currentDir);
-				echo("Contents of", currentDir + ":");
+				let cwd=words.slice(1).join(" ")||currentDir;
+				const files = Deno.readDirSync(cwd);
+				echo("Directory",cwd);
 				for (const file of files) {
 					let name=(file.isDirectory)?"["+file.name+"]":file.name;
 					echo(name);
@@ -1375,7 +1380,7 @@ async function relay() {
 				debug("relay calls in progress",calls)
 				// Generate tool_calls with simple, unique IDs
 				const toolCalls = calls.map((tool, index) => ({
-					id: `call_${rohaCalls++}`,
+					id: tool.id,
 					type: "function",
 					function: {
 						name: tool.function.name,
@@ -1409,12 +1414,14 @@ async function relay() {
 		rohaHistory.push({ role: "assistant", content: reply });
 	} catch (error) {
 		let line=error.message || String(error);
-		//Error during API call: Error: 400 "This model's maximum prompt length is 131072 but the request contains 165547 tokens."
 		if(line.includes("maximum prompt length")){
-			echo("maximum prompt length exceeded, switch model or drop shares to continue");
+			echo("Oops, maximum prompt length exceeded, switch model or drop shares to continue.");
 			return;
 		}
-		//Error during API call: Error: 400 deepseek-reasoner does not support Function Calling
+		if(line.includes("maximum context length")){
+			echo("Oops, maximum context length exceeded, switch model or drop shares to continue.");
+			return;
+		}
 		if(grokFunctions){
 			if(line.includes("does not support Function Calling")){
 				if(grokModel in roha.mut) {
@@ -1425,12 +1432,12 @@ async function relay() {
 			}
 			echo("resetting grokFunctions")
 			grokFunctions=false;
+			return;
 		}
-		//Error during API call: Error: 400 This model's maximum context length is 65536 tokens.
-		// However, you requested 77439 tokens (77439 in the messages, 0 in the completion).
-		// // Please reduce the length of the messages or completion.
-		let lines=error.split("\n");
-		echo("API error:", lines[0]);
+		echo("unhandled error line:", line);
+		if(verbose){
+			echo(String(error));
+		}
 	}
 }
 

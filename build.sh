@@ -2,20 +2,14 @@
 
 DIR="rc2"
 DEPENDENCIES=("README.md" "LICENSE.txt" "foundry.md" "welcome.txt" "accounts.json" "rates.json" "forge/readme.txt" "isolation/readme.txt" "isolation/test.js")
-FOUNDRY_SRC="/Users/simon/nitro/foundry/foundry.js"
 
-if [ ! -f "$FOUNDRY_SRC" ]; then
-    echo "Error: foundry.js not found at $FOUNDRY_SRC."
-    exit 1
-fi
-
-deno cache "$FOUNDRY_SRC"
+deno cache foundry.js
 if [ $? -ne 0 ]; then
     echo "Error: Failed to cache dependencies."
     exit 1
 fi
 
-deno compile --allow-run --allow-env --allow-net --allow-read --allow-write --output "$DIR/foundry" "$FOUNDRY_SRC"
+deno compile --allow-run --allow-env --allow-net --allow-read --allow-write --output "$DIR/foundry" foundry.js
 if [ $? -ne 0 ]; then
     echo "Error: Failed to compile foundry.js."
     exit 1
