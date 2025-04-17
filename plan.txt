@@ -1,6 +1,9 @@
 foundry roadmap
 
+fix line in lines after credit prompt
+prioritise welcome.txt when shared
 prepare rc2 of roha foundry
+split profiles from foundry.json, keep profiles in forge?
 raw prompt with auto complete and command history 
 testing annotation and file tool
 auto dump on file change

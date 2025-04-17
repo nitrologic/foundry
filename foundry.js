@@ -969,7 +969,7 @@ function onAccount(args){
 			name=lodeList[name|0];
 		}
 		let lode=roha.lode[name];
-		echo("Adjust balance of",lode.name,"balance",price(lode.credit));
+		echo("Adjust",lode.name,"balance",price(lode.credit));
 		creditCommand=(credit) => creditAccount(credit, name);
 	}else{
 		let list=[];
