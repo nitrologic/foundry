@@ -10,8 +10,6 @@ import OpenAI from "https://deno.land/x/openai@v4.67.2/mod.ts";
 
 const mut="Model Under Test";
 
-const emptyMUT = {notes:[],errors:[]}
-
 const foundryVersion = "rc2";
 const rohaTitle="foundry "+foundryVersion;
 const rohaMihi="I am testing foundry client. You are a helpful assistant.";
@@ -146,6 +144,10 @@ var modelList=[];
 var shareList=[]; //typically biggest to smallest
 var memberList=[];
 var lodeList=[];
+
+const emptyMUT = {
+	notes:[],errors:[]
+}
 
 const emptyModel={
 	name:"empty",account:"",hidden:false,prompts:0,completion:0
@@ -1097,7 +1099,7 @@ async function callCommand(command) {
 						let name=modelList[i];
 						let attr=(name==grokModel)?"*":" ";
 						let mut=(name in roha.mut)?roha.mut[name]:emptyMUT;
-					    let flag = (mut.hasForge) ? "𝆑" : "";
+						let flag = (mut.hasForge) ? "𝆑" : "";
 						let notes=mut.notes.join(" ");
 						echo(i,attr,name,flag,mut.relays|0,notes);
 					}
@@ -1288,39 +1290,33 @@ async function isolateCode(path,cwd) {
 async function processToolCalls(calls) {
 	const results = [];
 	for (const tool of calls) {
-	  if (!tool.id || !tool.function?.name) {
-		results.push({
-		  tool_call_id: tool.id || "unknown",
-		  name: tool.function?.name || "unknown",
-		  content: JSON.stringify({error: "Invalid tool call format"})
-		});
-		await log(`Invalid tool call: ${JSON.stringify(tool)}`, "error");
-		continue;
-	  }
-	  try {
-		const result = await onCall(tool);
-		results.push({
-		  tool_call_id: tool.id,
-		  name: tool.function.name,
-		  content: JSON.stringify(result || {success: false})
-		});
-	  } catch (e) {
-		results.push({
-		  tool_call_id: tool.id,
-		  name: tool.function.name,
-		  content: JSON.stringify({error: e.message})
-		});
-		await log(`Tool call failed: ${tool.function.name} - ${e.message}`, "error");
-	  }
+		if (!tool.id || !tool.function?.name) {
+			results.push({
+				tool_call_id: tool.id || "unknown",
+				name: tool.function?.name || "unknown",
+				content: JSON.stringify({error: "Invalid tool call format"})
+			});
+			await log(`Invalid tool call: ${JSON.stringify(tool)}`, "error");
+			continue;
+		}
+		try {
+			const result = await onCall(tool);
+			results.push({
+				tool_call_id: tool.id,
+				name: tool.function.name,
+				content: JSON.stringify(result || {success: false})
+			});
+		} catch (e) {
+			results.push({
+				tool_call_id: tool.id,
+				name: tool.function.name,
+				content: JSON.stringify({error: e.message})
+			});
+			await log(`Tool call failed: ${tool.function.name} - ${e.message}`, "error");
+		}
 	}
 	return results;
 }
-
-//echo("RunCode Result:", result.success ? "Success" : "Failed");
-//	if (result.output) echo("[isolation] ", result.output);
-//	if (result.error) echo("Error:", result.error);
-// todo: add save on exit
-//}
 
 async function relay() {
 	const verbose=roha.config.verbose;
@@ -1463,7 +1459,7 @@ async function chat() {
 				}
 				creditCommand="";
 			}else{
-				line=await promptFoundry(rohaPrompt);
+				line=await promptFoundry(lines.length?"+":rohaPrompt);
 			}
 			if (line === '') {
 				if(roha.config.returntopush && !lines.length) {
@@ -1500,7 +1496,9 @@ async function chat() {
 	}
 }
 
-Deno.addSignalListener("SIGINT", () => {cleanup();Deno.exit(0);});
-await runCode("isolation/test.js","isolation");
+//Deno.addSignalListener("SIGINT", () => {cleanup();Deno.exit(0);});
+
+// await runCode("isolation/test.js","isolation");
+
 await chat();
 exitFoundry();
