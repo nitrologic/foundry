@@ -147,9 +147,10 @@ If you still need help visit the project page.
 
 ## foundry prompt report
 
-[model modelname promptTokens replyTokens totalTokens contextSize]
+[model modelname promptTokens replyTokens totalTokens contextSize elapsed]
 
 * promptTokens used in the context - drop files to reduce
 * replyTokens used for completions - typically cost more
 * totalTokens a running total of tokens used
-* contextSize estimate in bytes of all files share
+* contextSize estimate in bytes of all files shared
+* elapsed - time in seconds spent in completion 

@@ -1326,8 +1326,10 @@ async function relay() {
 		let account=modelAccount[1];
 		let endpoint=rohaEndpoint[account];
 		let usetools=grokFunctions&&roha.config.tools;
+		const now=performance.now();
 		const payload = usetools?{ model, messages:rohaHistory, tools: rohaTools }:{ model, messages:squashMessages(rohaHistory) };
 		const completion = await endpoint.chat.completions.create(payload);
+		const elapsed=(performance.now()-now)/1000;
 		if (completion.model != model) {
 			echo("[relay model alert model:" + completion.model + " grokModel:" + grokModel + "]");
 			grokModel=completion.model+"@"+account;
@@ -1343,6 +1345,7 @@ async function relay() {
 		if(grokModel in roha.mut){
 			let mut=roha.mut[grokModel];
 			mut.relays = (mut.relays || 0) + 1;
+			mut.elapsed = (mut.elapsed || 0) + elapsed;
 			if(grokModel in modelRates){
 				let rates=modelRates[grokModel];
 				let spend=spent[0]*rates[0]/1e6+spent[1]*rates[1]/1e6;
@@ -1365,7 +1368,8 @@ async function relay() {
 				await writeFoundry();
 			}
 		}
-		let status = "[model " + grokModel + " " + usage.prompt_tokens + " " + usage.completion_tokens + " " + grokUsage + " " + size + "]";
+		let spec=["model",grokModel,usage.prompt_tokens,usage.completion_tokens,grokUsage,size,elapsed.toFixed(2)+"s"];
+		let status = "["+spec.join(" ")+"]";
 		echo(status);
 		var reply = "<blank>";
 		for (const choice of completion.choices) {
