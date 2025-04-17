@@ -1,8 +1,8 @@
 # nitrologic foundry research tool
 
-A command line application designed to chat and share files with models under test.
+A research tool designed to chat and share files with models under test.
 
-Warning, models with tool support may write to the forge folder at any time.
+Timestamps in some file names is hex seconds since 1.1.1970.
 
 ## foundry user interface
 
