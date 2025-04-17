@@ -6,9 +6,5 @@
 	"xai": {
 		"env": "XAI_API_KEY",
 		"url": "https://api.x.ai/v1"
-	},
-	"openai": {
-		"env": "OPENAI_API_KEY",
-		"url": "https://api.openai.com/v1"
 	}
-  }
+}

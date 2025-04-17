@@ -1,4 +1,7 @@
 {
+	"grok-3-beta@xai": [3.00, 15.00],
+	"grok-3-mini-fast-beta":[0.30,0.50],
+	"grok-beta@xai": [3.00, 15.00],
 	"gemini-1.5-flash-8b-exp-0827@gemini": [0.08, 0.30],
 	"gemini-1.5-flash-8b-exp-0924@gemini": [0.08, 0.30],
 	"gpt-4.1-nano-2025-04-14@openai": [0.10, 0.40],

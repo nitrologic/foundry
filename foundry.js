@@ -13,6 +13,7 @@ const mut="Model Under Test";
 const foundryVersion = "rc2";
 const rohaTitle="foundry "+foundryVersion;
 const rohaMihi="I am testing foundry client. You are a helpful assistant.";
+const cleanupRequired="Switch model, drop shares or reset history to continue.";
 
 const slowMillis = 25;
 
@@ -35,21 +36,21 @@ const encoder = new TextEncoder();
 const terminalColumns=120;
 
 const flagNames={
-	pushonshare : "emit a /push after any /share",
 	commitonstart : "commit shared files on start",
 	saveonexit : " save conversation history on exit",
-	tools : "enable model tool interface",
 	ansi : "markdown ANSI rendering",
 	slow : "output at reading speed",
 	verbose : "emit debug information",
 	broken : "ansi background blocks",
 	logging : "log all output to file",
-	resetcounters : "factory reset when reset",
-	returntopush : "hit return to /push - under test",
+	debugging : "temporary switch for emitting debug information",
+	pushonshare : "emit a /push after any /share",
+	forge : "enable model tool interface",
 	rawPrompt : "experimental rawmode stdin deno prompt replacement",
 	disorder : "allow /dos command to run shell",
+	resetcounters : "factory reset when reset",
 	versioning : "allow multiple versions in share history",
-	debugging : "temporary switch for emitting debug information"
+	returntopush : "hit return to /push - under test"
 };
 
 const emptyRoha={
@@ -242,9 +243,20 @@ async function sleep(ms) {
 	await new Promise(function(resolve) {setTimeout(resolve, ms);});
 }
 
+function number(value,fixed=2){
+	if (typeof value !== 'number' || isNaN(value)) return "NaN";
+	const units=["","K","M","G","T"];
+	const abs=Math.abs(value);
+	const unit=(Math.log10(abs)/3)|0;
+	if(unit>1){
+		if(unit>4)unit=4;
+		return (value/Math.pow(10,unit*3)).toFixed(fixed)+units[unit];
+	}
+	return String(value);
+}
 function measure(o){
-	let total=JSON.stringify(o).length;
-	return total;
+	let value=(typeof o==="string")?o.length:JSON.stringify(o).length;
+	return number(value)+"B";
 }
 
 let outputBuffer = [];
@@ -610,7 +622,7 @@ async function writeFoundry(){
 async function resetRoha(){
 	rohaShares = [];
 	roha.sharedFiles=[];
-	roha.tags={};
+//	roha.tags={};
 	if(roha.config.resetcounters) roha.counters={};
 	increment("resets");
 	await writeFoundry();
@@ -1326,7 +1338,7 @@ async function relay() {
 		let model=modelAccount[0];
 		let account=modelAccount[1];
 		let endpoint=rohaEndpoint[account];
-		let usetools=grokFunctions&&roha.config.tools;
+		let usetools=grokFunctions&&roha.config.forge;
 		const now=performance.now();
 		const payload = usetools?{ model, messages:rohaHistory, tools: rohaTools }:{ model, messages:squashMessages(rohaHistory) };
 		const completion = await endpoint.chat.completions.create(payload);
@@ -1343,13 +1355,14 @@ async function relay() {
 		let size = measure(rohaHistory);
 		let spent=[usage.prompt_tokens | 0,usage.completion_tokens | 0];
 		grokUsage += spent[0]+spent[1];
+		let spend=0;
 		if(grokModel in roha.mut){
 			let mut=roha.mut[grokModel];
 			mut.relays = (mut.relays || 0) + 1;
 			mut.elapsed = (mut.elapsed || 0) + elapsed;
 			if(grokModel in modelRates){
 				let rates=modelRates[grokModel];
-				let spend=spent[0]*rates[0]/1e6+spent[1]*rates[1]/1e6;
+				spend=spent[0]*rates[0]/1e6+spent[1]*rates[1]/1e6;
 				mut.cost+=spend;
 				let lode = roha.lode[account];
 				if(lode && typeof lode.credit === "number") {
@@ -1369,9 +1382,13 @@ async function relay() {
 				await writeFoundry();
 			}
 		}
-		let spec=["model",grokModel,usage.prompt_tokens,usage.completion_tokens,grokUsage,size,elapsed.toFixed(2)+"s"];
+
+		let cost="("+usage.prompt_tokens+"+"+usage.completion_tokens+"["+grokUsage+"])";
+		if(spend) cost="$"+spend.toFixed(3);
+		let spec=["model",grokModel,cost,size,elapsed.toFixed(2)+"s"];
 		let status = "["+spec.join(" ")+"]";
 		echo(status);
+
 		var reply = "<blank>";
 		for (const choice of completion.choices) {
 			let calls = choice.message.tool_calls;
@@ -1416,11 +1433,13 @@ async function relay() {
 	} catch (error) {
 		let line=error.message || String(error);
 		if(line.includes("maximum prompt length")){
-			echo("Oops, maximum prompt length exceeded, switch model or drop shares to continue.");
+			echo("Oops, maximum prompt length exceeded.");
+			echo(cleanupRequired);
 			return;
 		}
 		if(line.includes("maximum context length")){
-			echo("Oops, maximum context length exceeded, switch model or drop shares to continue.");
+			echo("Oops, maximum context length exceeded.");
+			echo(cleanupRequired);
 			return;
 		}
 		if(grokFunctions){

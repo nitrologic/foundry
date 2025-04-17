@@ -17,7 +17,7 @@ Default values are typically:
 
 * 0 commitonstart : commit shared files on start : true
 * 1 saveonexit :  save conversation history on exit : true
-* 2 tools : enable model tool interface : true
+* 2 forge : enable model tool interface : true
 * 3 ansi : markdown ANSI rendering : true
 * 4 slow : output at reading speed : true
 * 5 verbose : emit debug information : false
@@ -147,10 +147,14 @@ If you still need help visit the project page.
 
 ## foundry prompt report
 
-[model modelname promptTokens replyTokens totalTokens contextSize elapsed]
+[model modelname cost size elapsed]
+
+* cost - price of prompt if known else tokens spent
+* size - context size estimate in bytes of all files shared
+* elapsed - time in seconds spent in completion 
+
+The token cost summary when model has no rate defined includes:
 
 * promptTokens used in the context - drop files to reduce
 * replyTokens used for completions - typically cost more
 * totalTokens a running total of tokens used
-* contextSize estimate in bytes of all files shared
-* elapsed - time in seconds spent in completion 
