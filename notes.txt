@@ -1,3 +1,40 @@
+issue plain prompt is leaving things in the line buffer
+
+> /config
+0 pushonshare : emit a /push after any /share : false
+1 commitonstart : commit shared files on start : true
+2 saveonexit :  save conversation history on exit : false
+3 tools : enable model tool interface : true
+4 ansi : markdown ANSI rendering : true
+5 slow : output at reading speed : false
+6 verbose : emit debug information : true
+7 broken : ansi background blocks : false
+8 logging : log all output to file : false
+9 resetcounters : factory reset when reset : false
+10 returntopush : hit return to /push - under test : false
+11 rawPrompt : experimental rawmode stdin deno prompt replacement : false
+12 disorder : allow /dos command to run shell : false
+13 versioning : allow multiple versions in share history : false
+# 2
+flag saveonexit
+saveonexit -  save conversation history on exit is true
++
+It seems like you're entering numbers ("3" and "2"). Could you provide more context or let me know what you're trying
+to achieve? For example:
+
+- Are you testing a feature?
+- Do you have a question?
+- Are you referring to something specific?
+
+Let me know how I can help!
+
+Account deepseek debited $0.0002. New balance: $-0.0003
+[model deepseek-chat@deepseek 340 63 739 340]
+>
+
+
+
+
 rc2 testing going well
 
 assistant - does this look like an issue or expected behavior?

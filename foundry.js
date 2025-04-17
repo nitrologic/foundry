@@ -1496,9 +1496,9 @@ async function chat() {
 	}
 }
 
-//Deno.addSignalListener("SIGINT", () => {cleanup();Deno.exit(0);});
+Deno.addSignalListener("SIGINT", () => {cleanup();Deno.exit(0);});
 
-// await runCode("isolation/test.js","isolation");
+await runCode("isolation/test.js","isolation");
 
 await chat();
 exitFoundry();
