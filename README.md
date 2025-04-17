@@ -1,3 +1,5 @@
+![foundry-rc2](foundry1.png)
+
 # nitrologic foundry
 
 A research tool for model manipulation with star powered dialog

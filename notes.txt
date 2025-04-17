@@ -1,0 +1,52 @@
+Conclusion
+Yes, use `Set` when you need uniqueness or fast membership checks. Otherwise, stick to arrays or objects. Here’s a
+quick example:
+
+
+const uniqueTags = new Set(["js", "html", "js", "css"]);
+console.log([...uniqueTags]); // ["js", "html", "css"]
+
+Would you like help implementing this in your code?
+
+Account deepseek debited $0.0048. New balance: $-0.0264
+[model deepseek-chat@deepseek 16166 364 16530 52006 19.86s]
+> /commit
+
+<--- Last few GCs --->
+
+[18228:00000230C24B6000]   194416 ms: Scavenge 3901.8 (4107.0) -> 3898.8 (4151.7) MB, pooled: 0 MB, 4.68 / 0.00 ms  (average mu = 0.753, current mu = 0.678) task;
+[18228:00000230C24B6000]   194684 ms: Mark-Compact 3929.2 (4151.7) -> 3922.9 (4176.5) MB, pooled: 0 MB, 176.64 / 0.00 ms  (average mu = 0.666, current mu = 0.555) task; scavenge might not succeed
+
+
+
+#
+# Fatal JavaScript out of memory: Reached heap limit
+#
+==== C stack trace ===============================
+
+        CrashForExceptionInNonABICompliantCodeRange [0x00007FF7532BBEEB+1370827]
+        node_api_get_module_file_name [0x00007FF752F48157+20675767]
+        node_api_get_module_file_name [0x00007FF752F786DA+20873786]
+        node_api_get_module_file_name [0x00007FF752F259BA+20534554]
+        node_api_get_module_file_name [0x00007FF752FD9187+21269735]
+        node_api_get_module_file_name [0x00007FF752FD6CC1+21260321]
+        CrashForExceptionInNonABICompliantCodeRange [0x00007FF7534B3DCA+3434922]
+        node_api_get_module_file_name [0x00007FF752F476F4+20673108]
+        uv_mutex_destroy [0x00007FF751648CAD+15692861]
+        uv_mutex_destroy [0x00007FF750CCEC71+5755905]
+        uv_mutex_destroy [0x00007FF7507B3F6B+403195]
+        uv_mutex_destroy [0x00007FF7507B41E4+403828]
+        uv_mutex_destroy [0x00007FF7510C0266+9890294]
+        uv_mutex_destroy [0x00007FF7510BE27E+9882126]
+        uv_mutex_destroy [0x00007FF7510523E8+9440120]
+        uv_mutex_destroy [0x00007FF7510CE76E+9948926]
+        uv_mutex_destroy [0x00007FF7508E7F5B+1664747]
+        uv_mutex_destroy [0x00007FF75119F615+10804645]
+        uv_mutex_destroy [0x00007FF750AD1817+3669927]
+        uv_mutex_destroy [0x00007FF7510EB169+10066169]
+        uv_mutex_destroy [0x00007FF7508CD861+1556465]
+        uv_mutex_destroy [0x00007FF75119F796+10805030]
+        simdutf::get_active_implementation [0x00007FF75472D50C+18201388]
+        BaseThreadInitThunk [0x00007FF8BA52E8D7+23]
+        RtlUserThreadStart [0x00007FF8BB5714FC+44]
+        

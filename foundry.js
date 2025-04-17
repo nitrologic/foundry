@@ -48,7 +48,8 @@ const flagNames={
 	returntopush : "hit return to /push - under test",
 	rawPrompt : "experimental rawmode stdin deno prompt replacement",
 	disorder : "allow /dos command to run shell",
-	versioning : "allow multiple versions in share history"
+	versioning : "allow multiple versions in share history",
+	debugging : "temporary switch for emitting debug information"
 };
 
 const emptyRoha={
@@ -274,7 +275,7 @@ function debug(title,value){
 }
 
 function stripAnsi(text) {
-	return text.replace(/\x1B\[\d+(;\d+)*[mK]/g, '');
+	return text.replace(/\x1B\[\d+(;\d+)*[mK]/g, "");
 }
 
 async function log(lines,id){
@@ -540,7 +541,7 @@ function mdToAnsi(md) {
 			if(inCode){
 				result.push(ansiCodeBlock);
 				let codeType=trim.substring(3);
-				if(verbose&&codeType) print("inCode codetype:",codeType,"line:",line);
+				if(roha.config.debugging&&codeType) print("inCode codetype:",codeType,"line:",line);
 			}else{
 				if (broken) result.push(ansiReplyBlock);
 			}
@@ -554,8 +555,8 @@ function mdToAnsi(md) {
 					line = ansiPurple + line + ansiReset;
 				}
 				// bullets
-				if (line.startsWith('*') || line.startsWith('+')) {
-					line = '• ' + line.substring(1).trim();
+				if (line.startsWith("*") || line.startsWith("+")) {
+					line = "• " + line.substring(1).trim();
 				}
 				// bold
 				if (line.includes("**")) {
@@ -578,7 +579,7 @@ async function hashFile(filePath) {
 	const fileContent = await Deno.readFile(filePath);
 	const hashBuffer = await crypto.subtle.digest("SHA-256", fileContent);
 	const hashArray = new Uint8Array(hashBuffer);
-	return Array.from(hashArray).map(byte => byte.toString(16).padStart(2, '0')).join('');
+	return Array.from(hashArray).map(byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
 async function readFoundry(){
@@ -642,7 +643,7 @@ async function runDOS(args) {
 	if(!roha.config.disorder) return;
 	const shell = Deno.build.os === "windows" ? "cmd" : "bash";
 	const cmd = [shell, ...args.slice(1)];
-	echo(`Entering ${shell} (type 'exit' to return to Foundry)`);
+	echo("runDos",Deno.build.os,shell,"Type exit to return to Foundry.");
 	await flush();
 	const oldRaw = Deno.stdin.isRaw;
 	Deno.stdin.setRaw(false);
@@ -808,7 +809,7 @@ async function shareDir(dir,tag) {
 }
 
 function fileType(extension){
-	return contentType(extension) || 'application/octet-stream';
+	return contentType(extension) || "application/octet-stream";
 }
 
 const textExtensions = [
@@ -835,7 +836,7 @@ async function shareFile(path,tag) {
 	}else{
 		const length=fileContent.length;
 		if(length>0 && length<MaxFileSize){
-			const extension = path.split('.').pop();
+			const extension = path.split(".").pop();
 			const type = fileType(extension);
 			if (textExtensions.includes(extension)) {
 				let txt = decoder.decode(fileContent);
@@ -890,7 +891,7 @@ async function commitShares(tag) {
 	if (removedPaths.length) {
 		roha.sharedFiles = validShares;
 		await writeFoundry();
-		echo(`Invalid shares detected:\n${removedPaths.join('\n')}`);
+		echo("Files not found shares notified",removedPaths.join(" "));
 	}
 
 	if (dirty&&tag) {
@@ -1465,7 +1466,7 @@ async function chat() {
 			}else{
 				line=await promptFoundry(lines.length?"+":rohaPrompt);
 			}
-			if (line === '') {
+			if (line === "") {
 				if(roha.config.returntopush && !lines.length) {
 					echo("auto pushing...");
 					await callCommand("push");
