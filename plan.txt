@@ -1,0 +1,10 @@
+foundry roadmap
+
+prepare rc2 of roha foundry
+raw prompt with auto complete and command history 
+testing annotation and file tool
+auto dump on file change
+fix black text on dark background in light mode terminals
+up down arrow key triggers
+a code command that lists previous code blocks
+color codes for different languages
