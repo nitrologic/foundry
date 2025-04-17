@@ -1,4 +1,4 @@
-![foundry-rc2](foundry1.png)
+![foundry-rc2](media/foundry1.png)
 
 # nitrologic foundry
 
