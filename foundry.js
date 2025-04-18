@@ -647,7 +647,9 @@ async function resetRoha(){
 }
 
 function resolvePath(dir,filename){
-	return resolve(dir,filename);
+	let path=resolve(dir,filename);
+	path = path.replace(/\\/g, "/");
+	return path;
 }
 
 // multi process model under test prompt replacement
@@ -827,8 +829,8 @@ async function shareDir(dir, tag) {
 			try {
 				echo(`Processing file: ${path}`);
 				const info = await Deno.stat(path);
-				let size = info.size;
-				let modified = info.mtime.getTime();
+				const size=info.size||0;
+				const modified = info.mtime.getTime();
 				const hash = await hashFile(path);
 				await addShare({ path, size, modified, hash, tag });
 			} catch (error) {
@@ -912,23 +914,24 @@ async function commitShares(tag) {
 			continue;
 		}
 		try {
-			let path=JSON.parse(path);
+			const path=share.path;
 			const info = await Deno.stat(path);
-			if (!info.isFile || info.size > MaxFileSize) {
+			const size=info.size;
+			if (!info.isFile || size > MaxFileSize) {
 				removedPaths.push(share.path);
 				dirty = true;
 				continue;
 			}
 			const modified = share.modified !== info.mtime.getTime();
 			const isShared = rohaShares.includes(share.path);
-			console.log("isShared",isShared,"modified",modified);
+//			console.log("isShared",isShared,"modified",modified,"path",path);
 			if (modified || !isShared) {
-				const file = await Deno.open(share.path, { read: true });
-				if (!file.isFile || file.name.startsWith(".")) continue;
+				const file = await Deno.open(path,{read:true});
+//				if (!file.isFile || file.name.startsWith(".")) continue;
 				try {
-					const extension = share.path.split(".").pop();
+					const extension = path.split(".").pop();
 					const type = fileType(extension);
-					const metadata = JSON.stringify({ path: share.path, length: size, type, tag });
+					const metadata = JSON.stringify({ path: path, length: size, type, tag });
 					rohaPush(metadata);
 					if (textExtensions.includes(extension)) {
 						const text = await new Response(file.readable).text();
@@ -945,7 +948,7 @@ async function commitShares(tag) {
 					count++;
 					share.modified = info.mtime.getTime();
 					dirty = true;
-					if (!rohaShares.includes(share.path)) rohaShares.push(share.path);
+					if (!rohaShares.includes(path)) rohaShares.push(path);
 				} finally {
 					file.close();
 				}
@@ -1631,6 +1634,7 @@ let sessions=increment("sessions");
 if(sessions==0||roha.config.showWelcome){
 	let welcome=await Deno.readTextFile("welcome.txt");
 	echo(welcome);
+	await flush();
 	await writeFoundry();
 }
 

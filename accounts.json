@@ -4,6 +4,11 @@
 		"env":"DEEPSEEK_API_KEY",
 		"url":"https://api.deepseek.com"
 	},
+	"anthropic":{
+		"currency": "USD",
+		"env": "ANTHROPIC_API_KEY",
+		"url": "https://api.anthropic.com/v1"
+	},
 	"xai": {
 		"currency": "USD",
 		"env": "XAI_API_KEY",
