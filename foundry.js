@@ -8,14 +8,16 @@ import { contentType } from "https://deno.land/std@0.224.0/media_types/mod.ts";
 import { resolve } from "https://deno.land/std/path/mod.ts";
 import OpenAI from "https://deno.land/x/openai@v4.67.2/mod.ts";
 
-const mut="Model Under Test";
+const terminalColumns=120;
+const slowMillis = 25;
 
 const foundryVersion = "rc2";
 const rohaTitle="foundry "+foundryVersion;
 const rohaMihi="I am testing foundry client. You are a helpful assistant.";
 const cleanupRequired="Switch model, drop shares or reset history to continue.";
-const pageBreak="#+# #+#+# #+#+# #+#+# #+#+# #+# #+#+# #+#+# #+#+# #+#+# #+# #+#+# #+#";
-const slowMillis = 25;
+const pageBreak="#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+# #+#+# #+#+# #+#+# #+#+# #+# #+#+# #+#";
+
+const mut="Model Under Test";
 
 // main roha application starts here
 
@@ -33,8 +35,6 @@ const modelRates = JSON.parse(await Deno.readTextFile(ratesPath));
 
 const decoder = new TextDecoder("utf-8");
 const encoder = new TextEncoder();
-
-const terminalColumns=120;
 
 const flagNames={
 	commitonstart : "commit shared files on start",
@@ -97,14 +97,14 @@ function price(credit){
 }
 
 function addBand(){
-	let id="member"+increment("members");
+	const id="member"+increment("members");
 	roha.band[id]={};
 }
 
 function listBand(){
-	let band=[];
+	const band=[];
 	for(let id in roha.band){
-		let member=roha.band[id];
+		const member=roha.band[id];
 		band.push(member);
 	}
 	band.push("add");
@@ -143,11 +143,14 @@ function increment(key){
 	return i
 }
 
-let tagList=[];
 let modelList=[];
-let shareList=[]; //typically biggest to smallest
-let memberList=[];
 let lodeList=[];
+
+// never read - work in progress
+
+let tagList=[];
+let shareList=[];
+let memberList=[];
 
 const emptyMUT = {
 	notes:[],errors:[]
@@ -237,7 +240,7 @@ const rohaTools = [{
 },{
 	type: "function",
 	function: {
-		name: "annotate_foundry",
+		name: "annotate_forge",
 		description: "Set description of any object",
 		parameters: {
 			type: "object",
@@ -600,11 +603,11 @@ function mdToAnsi(md) {
 	return result.join("\n");
 }
 
-async function hashFile(filePath) {
-	const fileContent = await Deno.readFile(filePath);
-	const hashBuffer = await crypto.subtle.digest("SHA-256", fileContent);
-	const hashArray = new Uint8Array(hashBuffer);
-	return Array.from(hashArray).map(byte => byte.toString(16).padStart(2, "0")).join("");
+async function hashFile(filePath, size) {
+	if (size > MaxFileSize) throw new Error("File too large");
+	const buffer = await Deno.readFile(filePath);
+	const hash = await crypto.subtle.digest("SHA-256", buffer);
+	return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function readFoundry(){
@@ -644,9 +647,7 @@ async function resetRoha(){
 }
 
 function resolvePath(dir,filename){
-	let path=resolve(dir,filename);
-	path = path.replace(/\\/g, "/");
-	return path;
+	return resolve(dir,filename);
 }
 
 // multi process model under test prompt replacement
@@ -802,6 +803,11 @@ async function watchPaths(paths,handler){
 	}
 }
 
+async function fileLength(path) {
+	const info = await Deno.stat(path);
+	return info.size;
+}
+
 async function addShare(share){
 	share.id="share"+increment("shares");
 	roha.sharedFiles.push(share);
@@ -809,27 +815,32 @@ async function addShare(share){
 		await setTag(share.tag,share.id);
 	}
 }
-
-async function shareDir(dir,tag) {
+async function shareDir(dir, tag) {
 	try {
-		const paths=[];
-		const files = await Deno.readDir(dir);
-		for await (const file of files) {
+		const paths = [];
+		for (const file of Deno.readDirSync(dir)) {
 			if (file.isFile && !file.name.startsWith(".")) {
 				paths.push(resolvePath(dir, file.name));
 			}
 		}
 		for (const path of paths) {
-//			echo("statting path:"+path+":");
-			const info = await Deno.stat(path);
-			let size=info.size;
-			let modified=info.mtime.getTime();
-			const hash = await hashFile(path);
-			await addShare({path,size,modified,hash,tag})
+			try {
+				echo(`Processing file: ${path}`);
+				const info = await Deno.stat(path);
+				let size = info.size;
+				let modified = info.mtime.getTime();
+				const hash = await hashFile(path);
+				await addShare({ path, size, modified, hash, tag });
+			} catch (error) {
+				echo(`Error processing file ${path}: ${error.message}`);
+				continue;
+			}
 		}
-		await writeFoundry(); // TODO: check a dirty flag
+		await writeFoundry();
+		echo(`Shared ${paths.length} files from ${dir} with tag ${tag}`);
 	} catch (error) {
-		console.error("### Error"+error);
+		echo(`### Error in shareDir: ${error.message}`);
+		throw error;
 	}
 }
 
@@ -848,6 +859,8 @@ const textExtensions = [
 async function shareFile(path,tag) {
 	let fileContent=null;
 	try {
+		const fileSize=fileLength(path);
+		if(fileSize>MaxFileSize) throw(filesize);
 		fileContent = await Deno.readFile(path);
 	} catch (error) {
 		console.error("shareFile path:"+path+" error:", error);
@@ -889,48 +902,74 @@ async function shareFile(path,tag) {
 }
 
 async function commitShares(tag) {
-	let count=0;
+	let count = 0;
 	let dirty = false;
 	const validShares = [];
 	const removedPaths = [];
 	for (const share of roha.sharedFiles) {
-		if (tag && share.tag !== tag) {
+		if (false && tag && share.tag !== tag) {
 			validShares.push(share);
 			continue;
 		}
 		try {
-			const info = await Deno.stat(share.path);
+			let path=JSON.parse(path);
+			const info = await Deno.stat(path);
+			if (!info.isFile || info.size > MaxFileSize) {
+				removedPaths.push(share.path);
+				dirty = true;
+				continue;
+			}
 			const modified = share.modified !== info.mtime.getTime();
 			const isShared = rohaShares.includes(share.path);
+			console.log("isShared",isShared,"modified",modified);
 			if (modified || !isShared) {
-				await shareFile(share.path,tag);
-				count++;
-				share.modified = info.mtime.getTime();
-				dirty = true;
+				const file = await Deno.open(share.path, { read: true });
+				if (!file.isFile || file.name.startsWith(".")) continue;
+				try {
+					const extension = share.path.split(".").pop();
+					const type = fileType(extension);
+					const metadata = JSON.stringify({ path: share.path, length: size, type, tag });
+					rohaPush(metadata);
+					if (textExtensions.includes(extension)) {
+						const text = await new Response(file.readable).text();
+						rohaPush(text, "forge");
+					} else {
+						const chunks = [];
+						for await (const chunk of file.readable) {
+							chunks.push(...chunk);
+						}
+						const base64Encoded = btoa(String.fromCharCode(...chunks));
+						const mimeType = type;
+						rohaPush(`File content: MIME=${mimeType}, Base64=${base64Encoded}`, "forge");
+					}
+					count++;
+					share.modified = info.mtime.getTime();
+					dirty = true;
+					if (!rohaShares.includes(share.path)) rohaShares.push(share.path);
+				} finally {
+					file.close();
+				}
 			}
 			validShares.push(share);
 		} catch (error) {
-			removedPaths.push(share.path);
-			dirty = true;
+			if (error instanceof Deno.errors.NotFound || error instanceof Deno.errors.PermissionDenied) {
+				removedPaths.push(share.path);
+				dirty = true;
+			}
+			echo("Error processing", share.path, error.message);
 		}
 	}
-
 	if (removedPaths.length) {
 		roha.sharedFiles = validShares;
 		await writeFoundry();
-		echo("Files not found shares notified",removedPaths.join(" "));
+		echo("Removed invalid shares:", removedPaths.join(" "));
 	}
-
-	if (dirty&&tag) {
-		let invoke="feel free to call annotate_foundry to tag "+tag;
-		rohaHistory.push({role:"system",content:invoke});
+	if (dirty && tag) {
+		rohaHistory.push({ role: "system", content: "Feel free to call annotate_forge to tag " + tag });
 	}
-
-	if(count && roha.config.verbose){
-		let n=validShares.length;
-		echo("Updated files ",count,"of",n);
+	if (count && roha.config.verbose) {
+		echo("Updated files:", count, "of", validShares.length);
 	}
-
 	return dirty;
 }
 
@@ -965,6 +1004,11 @@ function listTags(){
 		list.push(name);
 	}
 	tagList=list;
+}
+
+async function openWithDefaultApp(path) {
+	const cmd = Deno.build.os === "windows" ? ["start", "", path] : Deno.build.os === "darwin" ? ["open", path] : ["xdg-open", path];
+	await Deno.run({ cmd }).status();
 }
 
 function onForge(args){
@@ -1183,7 +1227,7 @@ async function callCommand(command) {
 					const filename = words.slice(1).join(" ");
 					const path = resolvePath(Deno.cwd(), filename);
 					const info = await Deno.stat(path);
-					const tag = await promptFoundry("Enter tag name (optional):");
+					const tag = "";//await promptFoundry("Enter tag name (optional):");
 					if(info.isDirectory){
 						echo("Share directory path:",path);
 						await shareDir(path,tag);
@@ -1191,7 +1235,7 @@ async function callCommand(command) {
 						let size=info.size;
 						let modified=info.mtime.getTime();
 						echo("Share file path:",path," size:",info.size," ");
-						const hash = await hashFile(path);
+						const hash = await hashFile(path,size);
 						echo("hash:",hash);
 						await addShare({path,size,modified,hash,tag});
 					}
@@ -1256,7 +1300,7 @@ async function onCall(toolCall) {
 			echo("File saved to:", filePath);
 			roha.forge.push({name,path:filePath,contentType});
 			return { success: true, path: filePath };
-		case "annotate_foundry":
+		case "annotate_forge":
 			try {
 				const { name, type, description } = JSON.parse(toolCall.function.arguments || "{}");
 				switch(type){
@@ -1270,7 +1314,7 @@ async function onCall(toolCall) {
 				await writeFoundry(); // Persist changes
 				return { success: true, updated: 1 };
 			} catch (error) {
-				echo("annotate_foundry error:",error);
+				echo("annotate_forge error:",error);
 			}
 			return { success: false, updated: 0 };
 			break;
@@ -1558,6 +1602,8 @@ if (!fileExists) {
 // foundry lists models from active accounts
 
 echo(rohaTitle,"running from "+rohaPath);
+
+await flush();
 await readFoundry();
 const rohaEndpoint={};
 for(let account in modelAccounts){
@@ -1570,6 +1616,7 @@ for(let account in modelAccounts){
 
 // foundry starts
 
+await flush();
 let grokModel = roha.model||"deepseek-chat@deepseek";
 let grokFunctions=true;
 let grokUsage = 0;
@@ -1579,6 +1626,7 @@ echo("shares count:",roha.sharedFiles.length)
 echo("use /help for latest and exit to quit");
 echo("");
 
+await flush();
 let sessions=increment("sessions");
 if(sessions==0||roha.config.showWelcome){
 	let welcome=await Deno.readTextFile("welcome.txt");
@@ -1586,14 +1634,21 @@ if(sessions==0||roha.config.showWelcome){
 	await writeFoundry();
 }
 
+await flush();
 if(roha.config){
+	echo("commitonstart");
+	await flush();
 	if(roha.config.commitonstart) await commitShares();
 }else{
 	roha.config={};
 }
 
+echo("goodtogo");
+await flush();
 Deno.addSignalListener("SIGINT", () => {cleanup();Deno.exit(0);});
 
+// debugstuff
+// await openWithDefaultApp("foundry.json");
 // await runCode("isolation/test.js","isolation");
 
 await chat();
