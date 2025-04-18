@@ -1032,25 +1032,24 @@ function onForge(args){
 }
 
 async function creditAccount(credit,account){
-	let amount=Number(credit);
-	if(account in roha.lode){
-		let lode=roha.lode[account];
-		let current=lode.cedit||0;
-		lode.credit=amount;
-		if(roha.config.verbose) {
-			let delta=(current-amount).toFixed(2);
-			echo("creditAccount",price(amount),account,"balance",price(lode.credit),"change",delta);
-		}
-		await writeFoundry();
+	const amount=Number(credit);
+	const lode=roha.lode[account];
+	const current=lode.credit||0;
+	lode.credit=amount;
+	if(roha.config.verbose) {
+		const delta=(current-amount).toFixed(2);
+		echo("creditAccount",price(amount),account,"balance",price(lode.credit),"delta",delta);
 	}
+	await writeFoundry();
 }
 
-function onAccount(args){
+async function onAccount(args){
 	if(args.length>1){
 		let name=args.slice(1).join(" ");
 		if(name.length && !isNaN(name)) {
 			name=lodeList[name|0];
 		}
+		await specAccount(name);
 		let lode=roha.lode[name];
 		echo("Adjust",lode.name,"balance",price(lode.credit));
 		creditCommand=(credit) => creditAccount(credit, name);
@@ -1614,6 +1613,8 @@ for(let account in modelAccounts){
 	if(endpoint) {
 		rohaEndpoint[account]=endpoint;
 		await specAccount(account);
+	}else{
+		echo("endpoint failure for account",account);
 	}
 }
 

@@ -1,0 +1,17 @@
+rc2 testing
+
+issue 1
+
+adding anthropic 
+
+Connecting to account: anthropic
+Error: 401 Invalid bearer token
+endpoint failure for account anthropic
+
+issue 2
+
+Error processing C:/nitrologic/foundry/accounts.json Bad resource ID
+Error processing C:/nitrologic/foundry/build.bat Bad resource ID
+
+issue 3
+
