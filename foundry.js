@@ -497,33 +497,21 @@ async function loadHistory(filename){
 	return history;
 }
 
-const ansiBackgrounds = [
-	{ name: "dark0", code: "\x1b[48;5;232m" }, // #1c2526
-	{ name: "dark1", code: "\x1b[48;5;233m" }, // #2e3436
-	{ name: "dark2", code: "\x1b[48;5;234m" }, // #3d4446
-	{ name: "dark3", code: "\x1b[48;5;235m" }, // #4e5456
-	{ name: "charcoal", code: "\x1b[48;5;236m" }, // #606668
-	{ name: "darkBlue", code: "\x1b[48;5;17m" }, // #00005f
-	{ name: "darkGreen", code: "\x1b[48;5;23m" }, // #003f3f
-	{ name: "darkMutedPurple", code: "\x1b[48;5;54m" }, // #5f00af
-	{ name: "veryDarkBlue", code: "\x1b[48;5;18m" }, // #000087
-	{ name: "darkCharcoal", code: "\x1b[48;5;239m" }, // #4e4e4e
-	{ name: "mutedNavy", code: "\x1b[48;5;19m" }, // #0000af
-	{ name: "deepGray", code: "\x1b[48;5;240m" } // #585858
-];
+const ansiGreenBG="\x1b[48;5;23m";
+const ansiWhiteFG="\x1b[38;5;255m";
+const ansiGreyBG="\x1b[48;5;232m";
+
+const ansiCodeBlock = ansiGreenBG+ansiWhiteFG;
+const ansiReplyBlock = ansiGreyBG;
+
+const ansiPop = "\x1b[1;36m";
+const ansiReset = "\x1b[0m";
 
 const ansiMoveToEnd = "\x1b[999B";
 const ansiSaveCursor = "\x1b[s";
 const ansiRestoreCursor = "\x1b[u";
 
-const ansiReplyBlock = ansiBackgrounds[0].code;
-const ansiCodeBlock = ansiBackgrounds[6].code;
-
 const rohaPrompt=">";
-
-const ansiItalics = "\x1b[3m";
-const ansiPop = "\x1b[1;36m";
-const ansiReset = "\x1b[0m";
 
 function mdToAnsi(md) {
 	let verbose=roha.config.verbose;
@@ -1389,8 +1377,6 @@ async function relay() {
 		let modelSpec=[grokModel,cost,size,elapsed.toFixed(2)+"s"];
 		let status = "["+modelSpec.join(" ")+"]";
 		echo(status);
-		let reply = "<blank>";
-
 		var reply = "<blank>";
 		for (const choice of completion.choices) {
 			let calls = choice.message.tool_calls;
@@ -1545,7 +1531,7 @@ for(let account in modelAccounts){
 	}
 }
 
-// foundry starts 
+// foundry starts
 
 let grokModel = roha.model||"deepseek-chat@deepseek";
 let grokFunctions=true;

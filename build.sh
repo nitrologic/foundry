@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIR="rc2"
-DEPENDENCIES=("README.md" "LICENSE.txt" "foundry.md" "welcome.txt" "accounts.json" "rates.json" "forge/readme.txt" "isolation/readme.txt" "isolation/test.js")
+DEPENDENCIES=("README.md" "LICENSE.txt" "foundry.md" "welcome.txt" "accounts.json" "modelrates.json" "forge/readme.txt" "isolation/readme.txt" "isolation/test.js")
 
 deno cache foundry.js
 if [ $? -ne 0 ]; then
