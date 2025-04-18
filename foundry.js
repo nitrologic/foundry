@@ -143,11 +143,11 @@ function increment(key){
 	return i
 }
 
-var tagList=[];
-var modelList=[];
-var shareList=[]; //typically biggest to smallest
-var memberList=[];
-var lodeList=[];
+let tagList=[];
+let modelList=[];
+let shareList=[]; //typically biggest to smallest
+let memberList=[];
+let lodeList=[];
 
 const emptyMUT = {
 	notes:[],errors:[]
@@ -168,7 +168,7 @@ let listCommand="";
 let creditCommand=null;
 let rohaShares=[];
 let currentDir = Deno.cwd();
-var rohaHistory;
+let rohaHistory;
 
 var sessionStack=[];
 
@@ -336,13 +336,13 @@ async function flush() {
 }
 
 function wordWrap(text,cols=terminalColumns){
-	var result=[];
-	var pos=0;
+	let result=[];
+	let pos=0;
 	while(pos<text.length){
 		let line=text.substring(pos,pos+cols);
 		let n=line.length;
 		if(n==cols){
-			var i=line.lastIndexOf(" ",n);
+			let i=line.lastIndexOf(" ",n);
 			if(i>0){
 				line=line.substring(0,i);
 				n=i+1;
@@ -484,7 +484,7 @@ async function saveHistory(name) {
 }
 
 async function loadHistory(filename){
-	var history;
+	let history;
 	try {
 		const fileContent = await Deno.readTextFile(filename);
 		history = JSON.parse(fileContent);
@@ -706,7 +706,7 @@ async function runCode(){
 const reader = Deno.stdin.readable.getReader();
 const writer = Deno.stdout.writable.getWriter();
 
-var promptBuffer = new Uint8Array(0);
+let promptBuffer = new Uint8Array(0);
 
 async function promptFoundry(message) {
 	if(!roha.config.rawPrompt) return prompt(message);
@@ -721,7 +721,7 @@ async function promptFoundry(message) {
 		while (busy) {
 			const { value, done } = await reader.read();
 			if (done || !value) break;
-			var bytes = [];
+			let bytes = [];
 			for (const byte of value) {
 				if (byte === 0x7F || byte === 0x08) { // Backspace
 					if (promptBuffer.length > 0) {
@@ -1389,6 +1389,7 @@ async function relay() {
 		let modelSpec=[grokModel,cost,size,elapsed.toFixed(2)+"s"];
 		let status = "["+modelSpec.join(" ")+"]";
 		echo(status);
+		let reply = "<blank>";
 
 		var reply = "<blank>";
 		for (const choice of completion.choices) {
