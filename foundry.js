@@ -1364,7 +1364,7 @@ async function relay() {
 				if(lode && typeof lode.credit === "number") {
 					lode.credit-=spend;
 					if (roha.config.verbose) {
-						let summary=`Account ${account} ${SpentTokenChar}[${spent[0]},${spent[1]}] Spent: $${spend.toFixed(4)}. Balance: $${(lode.credit).toFixed(4)}`;
+						let summary=`${SpentTokenChar}[${spent[0]},${spent[1]}] account ${account} spent $${spend.toFixed(4)} balance $${(lode.credit).toFixed(4)}`;
 						echo(summary);
 					}
 				}
