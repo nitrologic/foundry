@@ -14,7 +14,7 @@ const foundryVersion = "rc2";
 const rohaTitle="foundry "+foundryVersion;
 const rohaMihi="I am testing foundry client. You are a helpful assistant.";
 const cleanupRequired="Switch model, drop shares or reset history to continue.";
-
+const pageBreak="#+# #+#+# #+#+# #+#+# #+#+# #+# #+#+# #+#+# #+#+# #+#+# #+# #+#+# #+#";
 const slowMillis = 25;
 
 // main roha application starts here
@@ -263,16 +263,16 @@ function unitString(value,precision=2,type){
 	if(roha.config.debugging) echo("unitString unit:",unit);
 	if(unit>0){
 		if(unit>4)unit=4;
-		let n=(value/Math.pow(10,unit*3));
-		let fixed=precision-String(n|0).length;
-		if(fixed>0) n=n.toFixed(fixed);
+		let n = value / Math.pow(10, unit*3);
+		let digits = Math.max(1, String(Math.floor(n)).length);
+		n = n.toFixed(Math.max(0, precision - digits));
 		return n+units[unit]+type;
 	}
 	return String(value)+type;
 }
 function measure(o){
 	let value=(typeof o==="string")?o.length:JSON.stringify(o).length;
-	return unitString(value,1,"B");
+	return unitString(value,4,"B");
 }
 
 let outputBuffer = [];
@@ -535,12 +535,14 @@ function mdToAnsi(md) {
 		line=line.trimEnd();
 		let trim=line.trim();
 		if (trim.startsWith("```")) {
+//			print(pageBreak);
 			inCode = !inCode;
 			if(inCode){
 				result.push(ansiCodeBlock);
 				let codeType=trim.substring(3);
 				if(roha.config.debugging&&codeType) print("inCode codetype:",codeType,"line:",line);
 			}else{
+				result.push(ansiReset);
 				if (broken) result.push(ansiReplyBlock);
 			}
 		}else{
@@ -1364,7 +1366,7 @@ async function relay() {
 				if(lode && typeof lode.credit === "number") {
 					lode.credit-=spend;
 					if (roha.config.verbose) {
-						let summary=`${SpentTokenChar}[${spent[0]},${spent[1]}] account ${account} spent $${spend.toFixed(4)} balance $${(lode.credit).toFixed(4)}`;
+						let summary=`account ${account} spent $${spend.toFixed(4)} balance $${(lode.credit).toFixed(4)} ${SpentTokenChar}[${spent[0]},${spent[1]}]`;
 						echo(summary);
 					}
 				}
@@ -1384,8 +1386,8 @@ async function relay() {
 
 		let cost="("+usage.prompt_tokens+"+"+usage.completion_tokens+"["+grokUsage+"])";
 		if(spend) cost="$"+spend.toFixed(3);
-		let spec=["model",grokModel,cost,size,elapsed.toFixed(2)+"s"];
-		let status = "["+spec.join(" ")+"]";
+		let modelSpec=[grokModel,cost,size,elapsed.toFixed(2)+"s"];
+		let status = "["+modelSpec.join(" ")+"]";
 		echo(status);
 
 		var reply = "<blank>";
@@ -1475,12 +1477,14 @@ async function chat() {
 					await callCommand(listCommand+" "+index);
 				}
 				listCommand="";
+				continue;
 			}else if(creditCommand){
 				line=await promptFoundry("$");
 				if(line.length && !isNaN(line)){
 					await creditCommand(line);
 				}
 				creditCommand="";
+				continue;
 			}else{
 				line=await promptFoundry(lines.length?"+":rohaPrompt);
 			}

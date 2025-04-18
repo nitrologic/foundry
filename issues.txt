@@ -1,10 +1,34 @@
+Updated files  18 of 18
+> testing markdown changes, can you reply with some test content please?
++
+#+# #+#+# #+#+# #+#+# #+#+# #+# #+#+# #+#+# #+#+# #+#+# #+# #+#+# #+#
+#+# #+#+# #+#+# #+#+# #+#+# #+# #+#+# #+#+# #+#+# #+#+# #+# #+#+# #+#
+Here's some test markdown content for Simon:
+
+
+# Code block test                                                                                                                                                
+def hello():                                                                                                                                                     
+    print("Markdown formatting test")                                                                                                                            
+                                                                                                                                                                 
+
+• Bold text*
+• Italic text*
+~~Strikethrough~~
+
+Header test
+
+- Bullet point 1
+- Bullet point 2
+
+> Blockquote test
+
+Let me know if Simon would like to test any specific markdown elements or formatting cases.
+
+account deepseek spent $0.0066 balance $-0.5321 ¤[24071,89]
+[deepseek-chat@deepseek $0.007 155.5KB 13.34s]
+
+
 issue 0 
-
-rc2 testing
-
-1 still too many chars in context size [model deepseek-chat@deepseek $0.014 204.947KB 61.35s]
-2 ansi purple is too dark in dark mode
-3 code blocks leak extra green bg onto following line
 
 issue 1
 
