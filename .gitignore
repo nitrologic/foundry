@@ -1,6 +1,8 @@
+.DS_Store
 archive
 saves
 release
 rc2
 foundry.log
 foundry.json
+publish.sh
