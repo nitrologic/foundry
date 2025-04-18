@@ -514,7 +514,7 @@ const ansiReplyBlock = ansiGreyBG;
 const ansiPop = "\x1b[1;36m";
 
 // Blue, Orange, Green, Purple, Yellow, Cyan, Pink, Teal
-const ansiColors = [
+const ansiColors2 = [
 	"\x1b[1;38;5;39m",  // Bright blue (#00afff)
 	"\x1b[1;38;5;47m",  // Bright green (#00ffaf)
 	"\x1b[1;38;5;141m", // Purple (#af87ff)
@@ -524,6 +524,18 @@ const ansiColors = [
 	"\x1b[1;38;5;37m",   // Teal (#00afaf)
 	"\x1b[1;38;5;202m" // Orange (#ff5f00)
 ];
+
+// Array of 8 ANSI colors (codes 30-37) selected for contrast and visibility in both light and dark modes.
+const ansiColors = [
+	"\x1b[30m", // Black: Deep black (#333333), subtle on light, visible on dark
+	"\x1b[31m", // Red: Muted red (#CC3333), clear on white and black
+	"\x1b[32m", // Green: Forest green (#2D6A4F), good contrast on both
+	"\x1b[33m", // Yellow: Golden yellow (#DAA520), readable on dark and light
+	"\x1b[34m", // Blue: Medium blue (#3366CC), balanced visibility
+	"\x1b[35m", // Magenta: Soft magenta (#AA3377), distinct on any background
+	"\x1b[36m", // Cyan: Teal cyan (#008080), contrasts well without glare
+	"\x1b[37m"  // White: Light gray (#CCCCCC), subtle on light, clear on dark
+  ];
 
 const ansiMoveToEnd = "\x1b[999B";
 const ansiSaveCursor = "\x1b[s";
@@ -555,6 +567,10 @@ function mdToAnsi(md) {
 			}
 		}else{
 			if (!inCode) {
+				// rules
+				if(line.startsWith("---")||line.startsWith("***")||line.startsWith("___")){
+					line=pageBreak;
+				}
 				// headershow
 				const header = line.match(/^#+/);
 				if (header) {
@@ -562,7 +578,7 @@ function mdToAnsi(md) {
 					line = line.substring(level).trim();
 					const ink=ansiColors[(colorCycle++)&7];
 					line = ink + line + ansiReset;	//ansiPop
-				}	
+				}
 				// bullets
 				if (line.startsWith("*") || line.startsWith("+")) {
 					line = "• " + line.substring(1).trim();
