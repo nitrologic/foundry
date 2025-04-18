@@ -522,8 +522,8 @@ const ansiCodeBlock = ansiBackgrounds[6].code;
 const rohaPrompt=">";
 
 const ansiItalics = "\x1b[3m";
+const ansiPop = "\x1b[1;36m";
 const ansiReset = "\x1b[0m";
-const ansiPurple = "\x1b[1;35m";
 
 function mdToAnsi(md) {
 	let verbose=roha.config.verbose;
@@ -550,7 +550,7 @@ function mdToAnsi(md) {
 				if (header) {
 					const level = header[0].length;
 					line = line.substring(level).trim();
-					line = ansiPurple + line + ansiReset;
+					line = ansiPop + line + ansiReset;
 				}
 				// bullets
 				if (line.startsWith("*") || line.startsWith("+")) {

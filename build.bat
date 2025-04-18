@@ -1,13 +1,14 @@
 @echo off
+setlocal EnableDelayedExpansion
 
 set DIR=rc2
-
-set CORE=README.md LICENSE.txt foundry.md welcome.txt accounts.json rates.json 
+set COMPILE_ARGS=--allow-run --allow-env --allow-net --allow-read --allow-write
+set CORE=README.md LICENSE.txt foundry.md welcome.txt accounts.json modelrates.json
 set EXTRAS=isolation\readme.txt isolation\test.js forge\readme.txt
 set DEPENDENCIES=%CORE% %EXTRAS%
 
 if not exist "foundry.js" (
-	echo Error: foundry.js not found in the current directory.
+	echo Error: foundry.js not found.
 	exit /b 1
 )
 
@@ -17,21 +18,22 @@ if errorlevel 1 (
 	exit /b 1
 )
 
-deno compile --allow-run --allow-env --allow-net --allow-read --allow-write --output %DIR%\foundry.exe foundry.js
+deno compile %COMPILE_ARGS% --output %DIR%\foundry.exe foundry.js
 if errorlevel 1 (
 	echo Error: Failed to compile foundry.js.
 	exit /b 1
 )
 
 if not exist "%DIR%\foundry.exe" (
-	echo Error: foundry.exe not created by compiler.
+	echo Error: foundry.exe not created.
 	exit /b 1
 )
 
 set MISSING=0
 for %%F in (%DEPENDENCIES%) do (
 	if exist "%%F" (
-		xcopy /Y "%%F" "%DIR%\%%F" >nul && (
+		set TARGET=%DIR%\%%F
+		xcopy /Y /-I /F "%%F" "%DIR%\%%F" && (
 			echo   Copied %%F
 		) || (
 			echo   Failed to copy %%F
@@ -43,11 +45,12 @@ for %%F in (%DEPENDENCIES%) do (
 	)
 )
 
-if %MISSING% gtr 0 (
-	echo Warning: %MISSING% file(s) were missing or failed to copy.
+if !MISSING! gtr 0 (
+	echo "Failure, please check dependencies."
+	exit /b 1
 )
 
-echo Foundry %DIR% build completed successfully.
+echo Foundry %DIR% build completed.
 
 rem upx --best %DIR%\foundry.exe
 

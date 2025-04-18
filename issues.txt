@@ -1,3 +1,11 @@
+issue 0 
+
+rc2 testing
+
+1 still too many chars in context size [model deepseek-chat@deepseek $0.014 204.947KB 61.35s]
+2 ansi purple is too dark in dark mode
+3 code blocks leak extra green bg onto following line
+
 issue 1
 
 Connecting to account: xai
