@@ -19,6 +19,7 @@ const slowMillis = 25;
 
 // main roha application starts here
 
+const SpentTokenChar="¤";
 const MaxFileSize=65536;
 
 const appDir = Deno.cwd();
@@ -169,6 +170,16 @@ let rohaShares=[];
 let currentDir = Deno.cwd();
 var rohaHistory;
 
+var sessionStack=[];
+
+function pushHistory(){
+	sessionStack.push(rohaHistory);
+	resetHistory();
+}
+function popHistory(){
+	if(sessionStack.length==0) return false;
+	return sessionStack.pop();
+}
 function resetHistory(){
 	rohaHistory = [{role:"system",content:rohaMihi}];
 }
@@ -1105,6 +1116,15 @@ async function callCommand(command) {
 					listCommand="model";
 				}
 				break;
+			case "run":
+				await pushHistory();
+				break;
+			case "exit":
+				let ok=await popHistory();
+				if(!ok){
+					echo("trigger exit here");
+				}
+				break;
 			case "reset":
 				await resetRoha();
 				break;
@@ -1344,7 +1364,7 @@ async function relay() {
 				if(lode && typeof lode.credit === "number") {
 					lode.credit-=spend;
 					if (roha.config.verbose) {
-						let summary=`Account ${account} Δtokens:[${spent[0]},${spent[1]}] $${spend.toFixed(4)}. Balance: $${(lode.credit).toFixed(4)}`;
+						let summary=`Account ${account} ${SpentTokenChar}[${spent[0]},${spent[1]}] Spent: $${spend.toFixed(4)}. Balance: $${(lode.credit).toFixed(4)}`;
 						echo(summary);
 					}
 				}

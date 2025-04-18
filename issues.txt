@@ -1,43 +1,13 @@
-+
-error: Uncaught (in promise) TypeError: Cannot read properties of null (reading 'toFixed')
-        echo("model:",name,"tool",grokFunctions,"rates",rate[0].toFixed(2)+","+rate[1].toFixed(2));
-                                                                ^
-    at resetModel (file:///C:/nitrologic/foundry/foundry.js:449:58)
-    at callCommand (file:///C:/nitrologic/foundry/foundry.js:1110:7)
-    at chat (file:///C:/nitrologic/foundry/foundry.js:1478:12)
-    at eventLoopTick (ext:core/01_core.js:217:9)
-    at async file:///C:/nitrologic/foundry/foundry.js:1529:1
+issue 1
 
-[model grok-3-mini-fast-beta@xai 52191 23 52214 344515 6.02s]
-> /tag hello took 6.02s with full commit on start
-0 rc2 (15)
-1 stress test 2 (16)
-> /tag
-0 rc2 (15)
-1 stress test 2 (16)
-> /tag hello took 6.02s
-0 rc2 (15)
-1 stress test 2 (16)
->
+Connecting to account: xai
+Error: 429 "Your team ac0a3c9a-0e58-4e3c-badd-be853c027a7f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit."
 
-> /credit
-0 deepseek $18.2098
-1 xai
-2 openai $10.0000
-# 1
-Error processing command: Cannot read properties of undefined (reading 'name')
+on reflection the error is ecpected so a disabled account status is appropriate in foundry.json
 
+issue 2 
 
-
-Conclusion
-Yes, use `Set` when you need uniqueness or fast membership checks. Otherwise, stick to arrays or objects. Here’s a
-quick example:
-
-
-const uniqueTags = new Set(["js", "html", "js", "css"]);
-console.log([...uniqueTags]); // ["js", "html", "css"]
-
-Would you like help implementing this in your code?
+worried about deno stacks
 
 Account deepseek debited $0.0048. New balance: $-0.0264
 [model deepseek-chat@deepseek 16166 364 16530 52006 19.86s]
