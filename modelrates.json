@@ -1,0 +1,52 @@
+{
+	"deepseek-chat@deepseek": {
+		"pricing": [0.27, 1.10],
+		"purpose": "General conversation and text generation",
+		"preview": "Cost-effective model for versatile tasks, trained on massive text datasets."
+	},
+	"grok-3-mini-fast-beta@xai": {
+		"pricing": [0.30, 0.50],
+		"purpose": "Fast text generation",
+		"preview": "Lightweight, high-speed model for basic reasoning and cost-efficient applications."
+	},
+	"deepseek-reasoner@deepseek": {
+		"pricing": [0.55, 2.19],
+		"purpose": "Advanced reasoning and problem-solving",
+		"preview": "High-performance model for complex math, coding, and logical tasks."
+	},
+	"grok-3-beta@xai": {
+		"pricing": [3.00, 15.00],
+		"purpose": "Text and code generation",
+		"preview": "Versatile model balancing performance and cost for diverse applications."
+	},
+	"grok-2-1212@xai": {
+		"pricing": [5.00, 15.00],
+		"purpose": "Advanced reasoning and code generation",
+		"preview": "High-performance model for complex research tasks and multi-step workflows."
+	},
+	"grok-beta@xai": {
+		"pricing": [5.00, 15.00],
+		"purpose": "Text and code generation",
+		"preview": "Robust model with advanced reasoning and function-calling capabilities."
+	},
+	"grok-2-image-1212@xai": {
+		"purpose": "Image-related tasks and text generation",
+		"preview": "Specialized model for creative image applications and textual outputs. Image pricing pending API fetch."
+	},
+	"grok-2-vision-1212@xai": {
+		"purpose": "Image analysis and text generation",
+		"preview": "Multimodal model for visual data processing and textual insights. Image pricing pending API fetch."
+	},
+	"grok-3-fast-beta@xai": {
+		"purpose": "Rapid text generation and reasoning",
+		"preview": "High-speed model for time-sensitive tasks and efficient processing."
+	},
+	"grok-3-mini-beta@xai": {
+		"purpose": "Efficient text generation",
+		"preview": "Compact model for lightweight reasoning and cost-effective tasks."
+	},
+	"grok-vision-beta@xai": {
+		"purpose": "Image processing and text generation",
+		"preview": "Multimodal model for visual data analysis and text responses. Image pricing pending API fetch."
+	}
+}

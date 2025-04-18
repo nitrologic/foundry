@@ -1,10 +1,13 @@
 {
 	"deepseek":{
+		"currency": "CNY",
 		"env":"DEEPSEEK_API_KEY",
 		"url":"https://api.deepseek.com"
 	},
 	"xai": {
+		"currency": "USD",
 		"env": "XAI_API_KEY",
 		"url": "https://api.x.ai/v1"
 	}
 }
+

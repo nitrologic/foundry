@@ -1,3 +1,13 @@
++
+error: Uncaught (in promise) TypeError: Cannot read properties of null (reading 'toFixed')
+        echo("model:",name,"tool",grokFunctions,"rates",rate[0].toFixed(2)+","+rate[1].toFixed(2));
+                                                                ^
+    at resetModel (file:///C:/nitrologic/foundry/foundry.js:449:58)
+    at callCommand (file:///C:/nitrologic/foundry/foundry.js:1110:7)
+    at chat (file:///C:/nitrologic/foundry/foundry.js:1478:12)
+    at eventLoopTick (ext:core/01_core.js:217:9)
+    at async file:///C:/nitrologic/foundry/foundry.js:1529:1
+
 [model grok-3-mini-fast-beta@xai 52191 23 52214 344515 6.02s]
 > /tag hello took 6.02s with full commit on start
 0 rc2 (15)

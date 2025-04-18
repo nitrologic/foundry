@@ -24,7 +24,7 @@ const MaxFileSize=65536;
 const appDir = Deno.cwd();
 const rohaPath = resolve(appDir,"foundry.json");
 const accountsPath = resolve(appDir,"accounts.json");
-const ratesPath=resolve(appDir,"rates.json");
+const ratesPath=resolve(appDir,"modelrates.json");
 const forgePath=resolve(appDir,"forge");
 
 const modelAccounts = JSON.parse(await Deno.readTextFile(accountsPath));
@@ -91,6 +91,7 @@ async function exitFoundry(){
 }
 
 function price(credit){
+	if (credit === null || isNaN(credit)) return "$0";
 	return "$"+credit.toFixed(4);
 }
 
@@ -243,20 +244,24 @@ async function sleep(ms) {
 	await new Promise(function(resolve) {setTimeout(resolve, ms);});
 }
 
-function number(value,fixed=2){
+function unitString(value,precision=2,type){
 	if (typeof value !== 'number' || isNaN(value)) return "NaN";
 	const units=["","K","M","G","T"];
 	const abs=Math.abs(value);
 	const unit=(Math.log10(abs)/3)|0;
-	if(unit>1){
+	if(roha.config.debugging) echo("unitString unit:",unit);
+	if(unit>0){
 		if(unit>4)unit=4;
-		return (value/Math.pow(10,unit*3)).toFixed(fixed)+units[unit];
+		let n=(value/Math.pow(10,unit*3));
+		let fixed=precision+1-String(n).length;
+		if(fixed>0) n=n.toFixed(fixed);
+		return n+units[unit]+type;
 	}
-	return String(value);
+	return String(value)+type;
 }
 function measure(o){
 	let value=(typeof o==="string")?o.length:JSON.stringify(o).length;
-	return number(value)+"B";
+	return unitString(value,1,"B");
 }
 
 let outputBuffer = [];
@@ -338,36 +343,6 @@ function wordWrap(text,cols=terminalColumns){
 	return result.join("\n");
 }
 
-async function pathExists(path) {
-	try {
-		const stat = await Deno.stat(path);
-		if (!stat.isFile) return false;
-		return true;
-	} catch (error) {
-		if (error instanceof Deno.errors.NotFound) return false;
-		if (error instanceof Deno.errors.PermissionDenied) return false;
-		throw error;
-	}
-}
-
-const fileExists = await pathExists(rohaPath);
-if (!fileExists) {
-	await Deno.writeTextFile(rohaPath, JSON.stringify(emptyRoha));
-	echo("Created new",rohaPath);
-}
-
-echo(rohaTitle,"running from "+rohaPath);
-await readFoundry();
-
-const rohaEndpoint={};
-for(let account in modelAccounts){
-	let endpoint = await connectAccount(account);
-	if(endpoint) {
-		rohaEndpoint[account]=endpoint;
-		await specAccount(account);
-	}
-}
-
 function safeStringify(value, seen = new WeakSet(), keyName = "") {
 	if (typeof value === "string") return value;
 	if (value === null || typeof value !== "object") return String(value);
@@ -443,8 +418,8 @@ async function resetModel(name){
 	grokModel=name;
 	grokFunctions=true;
 	rohaHistory.push({role:"system",content:"Model changed to "+name+"."});
-	let rates=(name in modelRates)?modelRates[name]:[0,0];
-	echo("model:",name,"tool",grokFunctions,"rates",rates[0].toFixed(2)+","+rates[1].toFixed(2));
+	let rate=(name in modelRates)?modelRates[name].pricing||[0,0]:[0,0];
+	echo("model:",name,"tool",grokFunctions,"rates",rate[0].toFixed(2)+","+rate[1].toFixed(2));
 	await writeFoundry();
 }
 
@@ -876,6 +851,7 @@ async function shareFile(path,tag) {
 }
 
 async function commitShares(tag) {
+	let count=0;
 	let dirty = false;
 	const validShares = [];
 	const removedPaths = [];
@@ -890,6 +866,7 @@ async function commitShares(tag) {
 			const isShared = rohaShares.includes(share.path);
 			if (modified || !isShared) {
 				await shareFile(share.path,tag);
+				count++;
 				share.modified = info.mtime.getTime();
 				dirty = true;
 			}
@@ -909,6 +886,11 @@ async function commitShares(tag) {
 	if (dirty&&tag) {
 		let invoke="feel free to call annotate_foundry to tag "+tag;
 		rohaHistory.push({role:"system",content:invoke});
+	}
+
+	if(count && roha.config.verbose){
+		let n=validShares.length;
+		echo("Updated files ",count,"of",n);
 	}
 
 	return dirty;
@@ -968,8 +950,12 @@ async function creditAccount(credit,account){
 	let amount=Number(credit);
 	if(account in roha.lode){
 		let lode=roha.lode[account];
+		let current=lode.cedit||0;
 		lode.credit=amount;
-		if(roha.verbose) echo("creditAccount",price(amount),account,"balance",price(lode.credit));
+		if(roha.config.verbose) {
+			let delta=(current-amount).toFixed(2);
+			echo("creditAccount",price(amount),account,"balance",price(lode.credit),"change",delta);
+		}
 		await writeFoundry();
 	}
 }
@@ -1184,26 +1170,16 @@ async function callCommand(command) {
 	return dirty;
 }
 
-let grokModel = roha.model||"deepseek-chat@deepseek";
-let grokFunctions=true;
-let grokUsage = 0;
-
-echo("present [",grokModel,"]");
-echo("shares count:",roha.sharedFiles.length)
-echo("use /help for latest and exit to quit");
-echo("");
-
-let sessions=increment("sessions");
-if(sessions==0||roha.config.showWelcome){
-	let welcome=await Deno.readTextFile("welcome.txt");
-	echo(welcome);
-	await writeFoundry();
-}
-
-if(roha.config){
-	if(roha.config.commitonstart) await commitShares();
-}else{
-	roha.config={};
+async function pathExists(path) {
+	try {
+		const stat = await Deno.stat(path);
+		if (!stat.isFile) return false;
+		return true;
+	} catch (error) {
+		if (error instanceof Deno.errors.NotFound) return false;
+		if (error instanceof Deno.errors.PermissionDenied) return false;
+		throw error;
+	}
 }
 
 function extensionForType(contentType) {
@@ -1361,17 +1337,20 @@ async function relay() {
 			mut.relays = (mut.relays || 0) + 1;
 			mut.elapsed = (mut.elapsed || 0) + elapsed;
 			if(grokModel in modelRates){
-				let rates=modelRates[grokModel];
-				spend=spent[0]*rates[0]/1e6+spent[1]*rates[1]/1e6;
+				let rate=modelRates[grokModel].pricing||[0,0];
+				spend=spent[0]*rate[0]/1e6+spent[1]*rate[1]/1e6;
 				mut.cost+=spend;
 				let lode = roha.lode[account];
 				if(lode && typeof lode.credit === "number") {
 					lode.credit-=spend;
-					echo(`Account ${account} debited $${spend.toFixed(4)}. New balance: $${(lode.credit).toFixed(4)}`);
+					if (roha.config.verbose) {
+						let summary=`Account ${account} Δtokens:[${spent[0]},${spent[1]}] $${spend.toFixed(4)}. Balance: $${(lode.credit).toFixed(4)}`;
+						echo(summary);
+					}
 				}
 				await writeFoundry();
 			}else{
-				if(roha.verbose){
+				if(roha.config.verbose){
 					echo("modelRates not found for",grokModel);
 				}
 			}
@@ -1449,10 +1428,10 @@ async function relay() {
 					roha.mut[grokModel].noFunctions=true;
 					await writeFoundry();
 				}
+				echo("resetting grokFunctions")
+				grokFunctions=false;
+				return;
 			}
-			echo("resetting grokFunctions")
-			grokFunctions=false;
-			return;
 		}
 		echo("unhandled error line:", line);
 		if(verbose){
@@ -1520,9 +1499,54 @@ async function chat() {
 	}
 }
 
+// foundry uses rohaPath to boot
+
+const fileExists = await pathExists(rohaPath);
+if (!fileExists) {
+	await Deno.writeTextFile(rohaPath, JSON.stringify(emptyRoha));
+	echo("Created new",rohaPath);
+}
+
+// foundry lists models from active accounts
+
+echo(rohaTitle,"running from "+rohaPath);
+await readFoundry();
+const rohaEndpoint={};
+for(let account in modelAccounts){
+	let endpoint = await connectAccount(account);
+	if(endpoint) {
+		rohaEndpoint[account]=endpoint;
+		await specAccount(account);
+	}
+}
+
+// foundry starts 
+
+let grokModel = roha.model||"deepseek-chat@deepseek";
+let grokFunctions=true;
+let grokUsage = 0;
+
+echo("present [",grokModel,"]");
+echo("shares count:",roha.sharedFiles.length)
+echo("use /help for latest and exit to quit");
+echo("");
+
+let sessions=increment("sessions");
+if(sessions==0||roha.config.showWelcome){
+	let welcome=await Deno.readTextFile("welcome.txt");
+	echo(welcome);
+	await writeFoundry();
+}
+
+if(roha.config){
+	if(roha.config.commitonstart) await commitShares();
+}else{
+	roha.config={};
+}
+
 Deno.addSignalListener("SIGINT", () => {cleanup();Deno.exit(0);});
 
-await runCode("isolation/test.js","isolation");
+// await runCode("isolation/test.js","isolation");
 
 await chat();
 exitFoundry();

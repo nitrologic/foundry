@@ -2,14 +2,12 @@
 
 # nitrologic foundry
 
-A research tool for model manipulation with star powered dialog
+A research tool for advanced model manipulation.
 
 Requires an api environment variable, see accounts.json for latest
 
 * DEEPSEEK_API_KEY
-* OPENAI_API_KEY 
 * XAI_API_KEY 
-* GEMINI_API_KEY
 
 # interface
 
