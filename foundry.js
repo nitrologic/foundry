@@ -497,21 +497,40 @@ async function loadHistory(filename){
 	return history;
 }
 
-const ansiGreenBG="\x1b[48;5;23m";
-const ansiWhiteFG="\x1b[38;5;255m";
-const ansiGreyBG="\x1b[48;5;232m";
+const ansiWhite = "\x1b[38;5;255m";
+const ansiNeonPink = "\x1b[38;5;201m";
+const ansiVividOrange = "\x1b[38;5;208m";
 
-const ansiCodeBlock = ansiGreenBG+ansiWhiteFG;
+const ansiGreenBG = "\x1b[48;5;23m";
+const ansiTealBG = "\x1b[48;5;24m";
+const ansiGreyBG = "\x1b[48;5;232m";
+const ansiReset = "\x1b[0m";
+
+const ansiCodeTitle = ansiTealBG+ansiVividOrange;
+const ansiCodeBlock = ansiGreenBG+ansiWhite;
+
 const ansiReplyBlock = ansiGreyBG;
 
 const ansiPop = "\x1b[1;36m";
-const ansiReset = "\x1b[0m";
+
+// Blue, Orange, Green, Purple, Yellow, Cyan, Pink, Teal
+const ansiColors = [
+	"\x1b[1;38;5;39m",  // Bright blue (#00afff)
+	"\x1b[1;38;5;47m",  // Bright green (#00ffaf)
+	"\x1b[1;38;5;141m", // Purple (#af87ff)
+	"\x1b[1;38;5;226m", // Yellow (#ffff00)
+	"\x1b[1;38;5;51m",  // Cyan (#00ffff)
+	"\x1b[1;38;5;219m", // Pink (#ffafff)
+	"\x1b[1;38;5;37m",   // Teal (#00afaf)
+	"\x1b[1;38;5;202m" // Orange (#ff5f00)
+];
 
 const ansiMoveToEnd = "\x1b[999B";
 const ansiSaveCursor = "\x1b[s";
 const ansiRestoreCursor = "\x1b[u";
 
 const rohaPrompt=">";
+let colorCycle=0;
 
 function mdToAnsi(md) {
 	let verbose=roha.config.verbose;
@@ -521,13 +540,14 @@ function mdToAnsi(md) {
 	const result = broken?[ansiReplyBlock]:[];
 	for (let line of lines) {
 		line=line.trimEnd();
-		let trim=line.trim();
+		const trim=line.trim();
 		if (trim.startsWith("```")) {
-//			print(pageBreak);
 			inCode = !inCode;
 			if(inCode){
+				const codeType=trim.substring(3).trim();
+//				result.push(ansiCodeTitle)
+//				result.push("====                   [   ]");
 				result.push(ansiCodeBlock);
-				let codeType=trim.substring(3);
 				if(roha.config.debugging&&codeType) print("inCode codetype:",codeType,"line:",line);
 			}else{
 				result.push(ansiReset);
@@ -540,8 +560,9 @@ function mdToAnsi(md) {
 				if (header) {
 					const level = header[0].length;
 					line = line.substring(level).trim();
-					line = ansiPop + line + ansiReset;
-				}
+					const ink=ansiColors[(colorCycle++)&7];
+					line = ink + line + ansiReset;	//ansiPop
+				}	
 				// bullets
 				if (line.startsWith("*") || line.startsWith("+")) {
 					line = "• " + line.substring(1).trim();
