@@ -253,7 +253,7 @@ function unitString(value,precision=2,type){
 	if(unit>0){
 		if(unit>4)unit=4;
 		let n=(value/Math.pow(10,unit*3));
-		let fixed=precision+1-String(n).length;
+		let fixed=precision-String(n|0).length;
 		if(fixed>0) n=n.toFixed(fixed);
 		return n+units[unit]+type;
 	}
