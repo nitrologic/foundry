@@ -605,15 +605,11 @@ function mdToAnsi(md) {
 
 async function hashFile(filePath) {
 	const buffer = await Deno.readFile(filePath);
-	try {
-		const hash = await crypto.subtle.digest("SHA-256", buffer);
-		const bytes = new Uint8Array(hash);
-		return Array.from(bytes, (byte) => 
-			byte.toString(16).padStart(2, "0")
-		).join("");
-	} finally {
-//		buffer.length = 0;
-	}
+	const hash = await crypto.subtle.digest("SHA-256", buffer);
+	const bytes = new Uint8Array(hash);
+	return Array.from(bytes, (byte) => 
+		byte.toString(16).padStart(2, "0")
+	).join("");
 }
 
 async function readFoundry(){
@@ -916,8 +912,8 @@ async function shareBlob(path,size,tag){
 	const metadata = JSON.stringify({ path: path, length: size, type, tag });
 	rohaPush(metadata);
 	if (textExtensions.includes(extension)) {
-		const text = await Deno.readTextFile(path);
-		rohaPush(text, "forge");
+		const content = await Deno.readTextFile(path);
+		rohaPush(content,"forge");
 	} else {
 		const file = await Deno.open(path,{read:true});
 		if (!file.readable) {
@@ -1655,7 +1651,7 @@ let grokFunctions=true;
 let grokUsage = 0;
 
 echo("present [",grokModel,"]");
-echo("shares count:",roha.sharedFiles.length)
+echo("shares",roha.sharedFiles.length)
 echo("use /help for latest and exit to quit");
 echo("");
 
@@ -1677,7 +1673,6 @@ if(roha.config){
 	roha.config={};
 }
 
-echo("goodtogo");
 await flush();
 Deno.addSignalListener("SIGINT", () => {cleanup();Deno.exit(0);});
 
