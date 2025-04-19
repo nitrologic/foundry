@@ -603,12 +603,13 @@ function mdToAnsi(md) {
 	return result.join("\n");
 }
 
-async function hashFile(filePath, maxSize = 1024 * 1024 * 100) {
+async function hashFile(filePath, maxSize = MaxFileSize) {
 	const { size } = await Deno.stat(filePath).catch(() => {
-		throw new Error(`Unable to access file: ${filePath}`);
+		throw new Error("Unable to access file",filePath);
 	});
 	if (size > maxSize) {
-		throw new Error(`File too large: ${size} bytes exceeds limit of ${maxSize} bytes`);
+		echo("File too large",size,"bytes exceeds limit of",maxSize);
+		throw new Error("file too large");
 	}
 	const buffer = await Deno.readFile(filePath);
 	try {
@@ -620,14 +621,6 @@ async function hashFile(filePath, maxSize = 1024 * 1024 * 100) {
 	} finally {
 		buffer.length = 0;
 	}
-}
-
-async function hashFile2(filePath, size) {
-	if (size > MaxFileSize) throw new Error("File too large");
-	const buffer = await Deno.readFile(filePath);
-	const hash = await crypto.subtle.digest("SHA-256", buffer);
-	const bytes=new Uint8Array(hash);
-	return Array.from().map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function readFoundry(){
@@ -837,6 +830,7 @@ async function addShare(share){
 		await setTag(share.tag,share.id);
 	}
 }
+
 async function shareDir(dir, tag) {
 	try {
 		const paths = [];
@@ -854,14 +848,14 @@ async function shareDir(dir, tag) {
 				const hash = await hashFile(path);
 				await addShare({ path, size, modified, hash, tag });
 			} catch (error) {
-				echo("shareDir path",path,"error",error.message);
+				echo("shareDir path",path,error.message);
 				continue;
 			}
 		}
 		await writeFoundry();
-		echo(`Shared ${paths.length} files from ${dir} with tag ${tag}`);
+		echo("Shared",paths.length,"files from",dir,"with tag",tag);
 	} catch (error) {
-		echo(`### Error in shareDir: ${error.message}`);
+		echo("shareDir error",error.message);
 		throw error;
 	}
 }
@@ -885,7 +879,7 @@ async function shareFile(path,tag) {
 		if(fileSize>MaxFileSize) throw(filesize);
 		fileContent = await Deno.readFile(path);
 	} catch (error) {
-		console.error("shareFile path:"+path+" error:", error);
+		echo("shareFile failure path",path,"error",error);
 		return;
 	}
 	if(path.endsWith("rules.txt")){
@@ -981,7 +975,6 @@ async function commitShares(tag) {
 			}
 			const modified = share.modified !== info.mtime.getTime();
 			const isShared = rohaShares.includes(share.path);
-//			console.log("isShared",isShared,"modified",modified,"path",path);
 			if (modified || !isShared) {
 				shareBlob(path,size,tag);
 				count++;
@@ -1007,14 +1000,14 @@ async function commitShares(tag) {
 		rohaHistory.push({ role: "system", content: "Feel free to call annotate_forge to tag " + tag });
 	}
 	if (count && roha.config.verbose) {
-		echo("Updated files:", count, "of", validShares.length);
+		echo("Updated files",count,"of",validShares.length);
 	}
 	return dirty;
 }
 
 async function setTag(name,note){
-	let tags=roha.tags||{};
-	let tag=(tags[name])?tags[name]:{name,info:[]};
+	const tags=roha.tags||{};
+	const tag=(tags[name])?tags[name]:{name,info:[]};
 	tag.info.push(note);
 	tags[name]=tag;
 	roha.tags=tags;
@@ -1174,32 +1167,34 @@ async function callCommand(command) {
 			case "history":
 				listHistory();
 				break;
-			case "load":
-				let save=words[1];
-				if(save){
-					if(save.length && !isNaN(save)) save=roha.saves[save|0];
-					if(roha.saves.includes(save)){
-						let history=await loadHistory(save);
-						rohaHistory=history;
-						echo("a new history is set");
+			case "load":{
+					const save=words[1];
+					if(save){
+						if(save.length && !isNaN(save)) save=roha.saves[save|0];
+						if(roha.saves.includes(save)){
+							const history=await loadHistory(save);
+							rohaHistory=history;
+							echo("a new history is set");
+						}
+					}else{
+						listSaves();
 					}
-				}else{
-					listSaves();
 				}
 				break;
-			case "save":
-				let savename=words.slice(1).join(" ");
-				await saveHistory(savename);
+			case "save":{
+					const savename=words.slice(1).join(" ");
+					await saveHistory(savename);
+				}
 				break;
 			case "note":
 				if(grokModel in roha.mut){
-					let mut=roha.mut[grokModel];
-					let note=words.slice(1).join(" ");
+					const mut=roha.mut[grokModel];
+					const note=words.slice(1).join(" ");
 					if(note.length){
 						mut.notes.push(note);
 						await writeFoundry();
 					}else{
-						let n=mut.notes.length;
+						const n=mut.notes.length;
 						for(let i=0;i<n;i++){
 							echo(i,mut.notes[i]);
 						}
@@ -1248,10 +1243,14 @@ async function callCommand(command) {
 			case "dir":{
 					const cwd=words.slice(1).join(" ")||currentDir;
 					echo("Directory",cwd);
+					const dirs=[];
+					const files=[];
 					for await (const file of Deno.readDir(cwd)) {
-						const name=(file.isDirectory)?"["+file.name+"]":file.name;
-						echo(name);
-					}
+						const name=file.name;
+						if(file.isDirectory)dirs.push(name);else files.push(name);
+					}					
+					if(dirs) echo("dirs",dirs.join(" "));
+					if(files) echo("files",files.join(" "));
 				}
 				break;
 			case "drop":
@@ -1270,8 +1269,8 @@ async function callCommand(command) {
 						echo("Share directory path:",path);
 						await shareDir(path,tag);
 					}else{
-						let size=info.size;
-						let modified=info.mtime.getTime();
+						const size=info.size;
+						const modified=info.mtime.getTime();
 						echo("Share file path:",path," size:",info.size," ");
 						const hash = await hashFile(path,size);
 						echo("hash:",hash);
