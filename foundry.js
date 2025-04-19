@@ -603,14 +603,7 @@ function mdToAnsi(md) {
 	return result.join("\n");
 }
 
-async function hashFile(filePath, maxSize = MaxFileSize) {
-	const { size } = await Deno.stat(filePath).catch(() => {
-		throw new Error("Unable to access file",filePath);
-	});
-	if (size > maxSize) {
-		echo("File too large",size,"bytes exceeds limit of",maxSize);
-		throw new Error("file too large");
-	}
+async function hashFile(filePath) {
 	const buffer = await Deno.readFile(filePath);
 	try {
 		const hash = await crypto.subtle.digest("SHA-256", buffer);
@@ -619,7 +612,7 @@ async function hashFile(filePath, maxSize = MaxFileSize) {
 			byte.toString(16).padStart(2, "0")
 		).join("");
 	} finally {
-		buffer.length = 0;
+//		buffer.length = 0;
 	}
 }
 
@@ -843,7 +836,7 @@ async function shareDir(dir, tag) {
 			try {
 				echo("Sharing",path);
 				const info = await Deno.stat(path);
-				const size=info.size||0;
+				const size = info.size||0;
 				const modified = info.mtime.getTime();
 				const hash = await hashFile(path);
 				await addShare({ path, size, modified, hash, tag });
@@ -855,7 +848,7 @@ async function shareDir(dir, tag) {
 		await writeFoundry();
 		echo("Shared",paths.length,"files from",dir,"with tag",tag);
 	} catch (error) {
-		echo("shareDir error",error.message);
+		echo("shareDir error",String(error)); //.message
 		throw error;
 	}
 }
