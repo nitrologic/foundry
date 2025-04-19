@@ -2,6 +2,17 @@
 // a research client for evaluating models
 // (c)2025 Simon Armstrong
 
+// linter is on, constification continues
+// avoid raw ansi in function code
+
+// binaries are available on github
+//
+// https://github.com/nitrologic/foundry/releases
+//
+// or install deno and run from source 
+// 
+// https://deno.com/
+//
 // deno run --allow-run --allow-env --allow-net --allow-read --allow-write roha.js
 
 import { contentType } from "https://deno.land/std@0.224.0/media_types/mod.ts";
@@ -305,10 +316,6 @@ function debug(title,value){
 	}
 }
 
-function stripAnsi(text) {
-	return text.replace(/\x1B\[\d+(;\d+)*[mK]/g, "");
-}
-
 async function log(lines,id){
 	if(roha.config.logging){
 		const time = new Date().toISOString();
@@ -438,14 +445,20 @@ async function resetModel(name){
 }
 
 function dropShares(){
-	for(let item of rohaHistory){
-		if(item && item.role==="user" && item.user==="forge"){
-			item.user="drop";
-			item.content="dropped path "+(item.path||"");
+	let dirty=false;
+	for(const item of rohaHistory){
+		if(item.role==="user" && item.name==="forge"){
+			item.user="foundry";
+			item.content="dropped share";
+			dirty=true;
 		}
 	}
-	rohaShares=[];
-	echo("all shares dropped");
+	if(dirty)echo("content removed from history");
+	if(rohaShares.length){
+		rohaShares=[];
+		echo("all shares dropped");
+	}
+	if(roha.config.commitShares) echo("With commitShares enabled consider /reset.")
 }
 
 function listShare(){
@@ -500,6 +513,37 @@ async function loadHistory(filename){
 	return history;
 }
 
+
+function stripAnsi(text) {
+	return text.replace(/\x1B\[\d+(;\d+)*[mK]/g, "");
+}
+
+// Array of 8 ANSI colors (codes 30-37) selected for contrast and visibility in both light and dark modes.
+const ansiColors = [
+	"\x1b[30m", // Black: Deep black (#333333), subtle on light, visible on dark
+	"\x1b[31m", // Red: Muted red (#CC3333), clear on white and black
+	"\x1b[32m", // Green: Forest green (#2D6A4F), good contrast on both
+	"\x1b[33m", // Yellow: Golden yellow (#DAA520), readable on dark and light
+	"\x1b[34m", // Blue: Medium blue (#3366CC), balanced visibility
+	"\x1b[35m", // Magenta: Soft magenta (#AA3377), distinct on any background
+	"\x1b[36m", // Cyan: Teal cyan (#008080), contrasts well without glare
+	"\x1b[37m"  // White: Light gray (#CCCCCC), subtle on light, clear on dark
+];
+
+function ansiStyle(text, style = "bold", colorIndex = null) {
+	if (!roha.config.ansi) return text;
+	let formatted = text;
+	switch (style.toLowerCase()) {
+		case "bold": formatted = "\x1b[1m" + formatted + "\x1b[0m"; break;
+		case "italic": formatted = "\x1b[3m" + formatted + "\x1b[0m"; break;
+		case "underline": formatted = "\x1b[4m" + formatted + "\x1b[0m"; break;
+	}
+	if (colorIndex !== null && colorIndex >= 0 && colorIndex < ansiColors.length) {
+		formatted = ansiColors[colorIndex] + formatted + "\x1b[0m";
+	}
+	return formatted;
+}
+
 const ansiWhite = "\x1b[38;5;255m";
 const ansiNeonPink = "\x1b[38;5;201m";
 const ansiVividOrange = "\x1b[38;5;208m";
@@ -516,29 +560,7 @@ const ansiReplyBlock = ansiGreyBG;
 
 const ansiPop = "\x1b[1;36m";
 
-// Blue, Orange, Green, Purple, Yellow, Cyan, Pink, Teal
-const ansiColors2 = [
-	"\x1b[1;38;5;39m",  // Bright blue (#00afff)
-	"\x1b[1;38;5;47m",  // Bright green (#00ffaf)
-	"\x1b[1;38;5;141m", // Purple (#af87ff)
-	"\x1b[1;38;5;226m", // Yellow (#ffff00)
-	"\x1b[1;38;5;51m",  // Cyan (#00ffff)
-	"\x1b[1;38;5;219m", // Pink (#ffafff)
-	"\x1b[1;38;5;37m",   // Teal (#00afaf)
-	"\x1b[1;38;5;202m" // Orange (#ff5f00)
-];
 
-// Array of 8 ANSI colors (codes 30-37) selected for contrast and visibility in both light and dark modes.
-const ansiColors = [
-	"\x1b[30m", // Black: Deep black (#333333), subtle on light, visible on dark
-	"\x1b[31m", // Red: Muted red (#CC3333), clear on white and black
-	"\x1b[32m", // Green: Forest green (#2D6A4F), good contrast on both
-	"\x1b[33m", // Yellow: Golden yellow (#DAA520), readable on dark and light
-	"\x1b[34m", // Blue: Medium blue (#3366CC), balanced visibility
-	"\x1b[35m", // Magenta: Soft magenta (#AA3377), distinct on any background
-	"\x1b[36m", // Cyan: Teal cyan (#008080), contrasts well without glare
-	"\x1b[37m"  // White: Light gray (#CCCCCC), subtle on light, clear on dark
-  ];
 
 const ansiMoveToEnd = "\x1b[999B";
 const ansiSaveCursor = "\x1b[s";
@@ -1566,7 +1588,7 @@ async function chat() {
 			let line="";
 			if(listCommand){
 				line=await promptFoundry("#");
-				if(line.length && !isNaN(line)){
+				if(line && line.length && !isNaN(line)){
 					let index=line|0;
 					await callCommand(listCommand+" "+index);
 				}
@@ -1574,7 +1596,7 @@ async function chat() {
 				continue;
 			}else if(creditCommand){
 				line=await promptFoundry("$");
-				if(line.length && !isNaN(line)){
+				if(line&&line.length && !isNaN(line)){
 					await creditCommand(line);
 				}
 				creditCommand="";
