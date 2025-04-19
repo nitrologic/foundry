@@ -603,11 +603,31 @@ function mdToAnsi(md) {
 	return result.join("\n");
 }
 
-async function hashFile(filePath, size) {
+async function hashFile(filePath, maxSize = 1024 * 1024 * 100) {
+	const { size } = await Deno.stat(filePath).catch(() => {
+		throw new Error(`Unable to access file: ${filePath}`);
+	});
+	if (size > maxSize) {
+		throw new Error(`File too large: ${size} bytes exceeds limit of ${maxSize} bytes`);
+	}
+	const buffer = await Deno.readFile(filePath);
+	try {
+		const hash = await crypto.subtle.digest("SHA-256", buffer);
+		const bytes = new Uint8Array(hash);
+		return Array.from(bytes, (byte) => 
+			byte.toString(16).padStart(2, "0")
+		).join("");
+	} finally {
+		buffer.length = 0;
+	}
+}
+
+async function hashFile2(filePath, size) {
 	if (size > MaxFileSize) throw new Error("File too large");
 	const buffer = await Deno.readFile(filePath);
 	const hash = await crypto.subtle.digest("SHA-256", buffer);
-	return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
+	const bytes=new Uint8Array(hash);
+	return Array.from().map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function readFoundry(){
@@ -834,7 +854,7 @@ async function shareDir(dir, tag) {
 				const hash = await hashFile(path);
 				await addShare({ path, size, modified, hash, tag });
 			} catch (error) {
-				echo(`Error processing file ${path}: ${error.message}`);
+				echo("shareDir path",path,"error",error.message);
 				continue;
 			}
 		}
@@ -903,6 +923,43 @@ async function shareFile(path,tag) {
 	}
 }
 
+async function shareBlob(path,size,tag){
+	const extension = path.split(".").pop();
+	const type = fileType(extension);
+	const metadata = JSON.stringify({ path: path, length: size, type, tag });
+	rohaPush(metadata);
+	if (textExtensions.includes(extension)) {
+		const text = await Deno.readTextFile(path);
+		rohaPush(text, "forge");
+	} else {
+		const file = await Deno.open(path,{read:true});
+		if (!file.readable) {
+			throw new Error("Invalid file: readable stream required");
+		}
+		if (!mimeType) {
+			throw new Error("MIME type required");
+		}
+		const chunks = [];
+		const reader = file.readable.getReader();
+		try {
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				chunks.push(value);
+			}
+			const buffer = await new Blob(chunks).arrayBuffer();
+			const bytes = new Uint8Array(buffer);
+			const base64Encoded = btoa(String.fromCharCode(...bytes));
+			rohaPush(`File content: MIME=${mimeType}, Base64=${base64Encoded}`, "forge");
+		} catch (error) {
+			throw new Error(`Failed to encode file: ${error.message}`);
+		} finally {
+			reader.releaseLock();
+			file.close();
+		}
+	}		
+}
+
 async function commitShares(tag) {
 	let count = 0;
 	let dirty = false;
@@ -926,32 +983,11 @@ async function commitShares(tag) {
 			const isShared = rohaShares.includes(share.path);
 //			console.log("isShared",isShared,"modified",modified,"path",path);
 			if (modified || !isShared) {
-				const file = await Deno.open(path,{read:true});
-//				if (!file.isFile || file.name.startsWith(".")) continue;
-				try {
-					const extension = path.split(".").pop();
-					const type = fileType(extension);
-					const metadata = JSON.stringify({ path: path, length: size, type, tag });
-					rohaPush(metadata);
-					if (textExtensions.includes(extension)) {
-						const text = await new Response(file.readable).text();
-						rohaPush(text, "forge");
-					} else {
-						const chunks = [];
-						for await (const chunk of file.readable) {
-							chunks.push(...chunk);
-						}
-						const base64Encoded = btoa(String.fromCharCode(...chunks));
-						const mimeType = type;
-						rohaPush(`File content: MIME=${mimeType}, Base64=${base64Encoded}`, "forge");
-					}
-					count++;
-					share.modified = info.mtime.getTime();
-					dirty = true;
-					if (!rohaShares.includes(path)) rohaShares.push(path);
-				} finally {
-					file.close();
-				}
+				shareBlob(path,size,tag);
+				count++;
+				share.modified = info.mtime.getTime();
+				dirty = true;
+				if (!rohaShares.includes(path)) rohaShares.push(path);
 			}
 			validShares.push(share);
 		} catch (error) {
@@ -959,7 +995,7 @@ async function commitShares(tag) {
 				removedPaths.push(share.path);
 				dirty = true;
 			}
-			echo("Error processing", share.path, error.message);
+			echo("commitShares path", share.path,"error", error.message);
 		}
 	}
 	if (removedPaths.length) {
@@ -1077,7 +1113,7 @@ async function showHelp() {
 		const md = await Deno.readTextFile("foundry.md");
 		echo(mdToAnsi(md));
 	} catch (e) {
-		echo("Error loading help file: " + e.message);
+		echo("showHelp error",e.message);
 	}
 }
 
@@ -1257,7 +1293,7 @@ async function callCommand(command) {
 				return false; // Command not recognized
 		}
 	} catch (error) {
-		echo("Error processing command:", error.message);
+		echo("callCommand error", error.message);
 	}
 	increment("calls");
 	return dirty;
