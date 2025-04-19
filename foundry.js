@@ -840,14 +840,14 @@ async function addShare(share){
 async function shareDir(dir, tag) {
 	try {
 		const paths = [];
-		for (const file of Deno.readDirSync(dir)) {
+		for await (const file of Deno.readDir(dir)) {
 			if (file.isFile && !file.name.startsWith(".")) {
 				paths.push(resolvePath(dir, file.name));
 			}
 		}
 		for (const path of paths) {
 			try {
-				echo(`Processing file: ${path}`);
+				echo("Sharing",path);
 				const info = await Deno.stat(path);
 				const size=info.size||0;
 				const modified = info.mtime.getTime();
@@ -966,7 +966,7 @@ async function commitShares(tag) {
 	const validShares = [];
 	const removedPaths = [];
 	for (const share of roha.sharedFiles) {
-		if (false && tag && share.tag !== tag) {
+		if (tag && share.tag !== tag) {
 			validShares.push(share);
 			continue;
 		}
@@ -1245,13 +1245,13 @@ async function callCommand(command) {
 				currentDir = Deno.cwd();
 				echo("Changed directory to", currentDir);
 				break;
-			case "dir":
-				let cwd=words.slice(1).join(" ")||currentDir;
-				const files = Deno.readDirSync(cwd);
-				echo("Directory",cwd);
-				for (const file of files) {
-					let name=(file.isDirectory)?"["+file.name+"]":file.name;
-					echo(name);
+			case "dir":{
+					const cwd=words.slice(1).join(" ")||currentDir;
+					echo("Directory",cwd);
+					for await (const file of Deno.readDir(cwd)) {
+						const name=(file.isDirectory)?"["+file.name+"]":file.name;
+						echo(name);
+					}
 				}
 				break;
 			case "drop":
@@ -1632,6 +1632,7 @@ async function chat() {
 // foundry uses rohaPath to boot
 
 const fileExists = await pathExists(rohaPath);
+
 if (!fileExists) {
 	await Deno.writeTextFile(rohaPath, JSON.stringify(emptyRoha));
 	echo("Created new",rohaPath);
