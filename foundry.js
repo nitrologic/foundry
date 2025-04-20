@@ -614,7 +614,7 @@ async function hashFile(filePath) {
 	const buffer = await Deno.readFile(filePath);
 	const hash = await crypto.subtle.digest("SHA-256", buffer);
 	const bytes = new Uint8Array(hash);
-	return Array.from(bytes, (byte) => 
+	return Array.from(bytes, (byte) =>
 		byte.toString(16).padStart(2, "0")
 	).join("");
 }
@@ -947,7 +947,7 @@ async function shareBlob(path,size,tag){
 			reader.releaseLock();
 			file.close();
 		}
-	}		
+	}
 }
 
 async function commitShares(tag) {
@@ -1244,7 +1244,7 @@ async function callCommand(command) {
 					for await (const file of Deno.readDir(cwd)) {
 						const name=file.name;
 						if(file.isDirectory)dirs.push(name);else files.push(name);
-					}					
+					}
 					if(dirs) echo("dirs",dirs.join(" "));
 					if(files) echo("files",files.join(" "));
 				}
@@ -1671,21 +1671,30 @@ if(sessions==0||roha.config.showWelcome){
 	await writeFoundry();
 }
 
-await flush();
 if(roha.config){
-	echo("commitonstart");
-	await flush();
-	if(roha.config.commitonstart) await commitShares();
+	if(roha.config.commitonstart) {
+		echo("commitonstart");
+		await flush();
+		await commitShares();
+	}
 }else{
 	roha.config={};
 }
 
 await flush();
-Deno.addSignalListener("SIGINT", () => {cleanup();Deno.exit(0);});
+Deno.addSignalListener("SIGINT", () => {console.log("sigint!");cleanup();Deno.exit(0);});
 
 // debugstuff
 // await openWithDefaultApp("foundry.json");
 // await runCode("isolation/test.js","isolation");
 
-await chat();
+
+try {
+	await chat();
+} catch (error) {
+	console.error("Foundry crashed:", error);
+	await exitFoundry();
+	Deno.exit(1);
+}
+
 exitFoundry();
