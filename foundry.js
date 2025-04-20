@@ -9,9 +9,7 @@
 //
 // https://github.com/nitrologic/foundry/releases
 //
-// or install deno and run from source 
-// 
-// https://deno.com/
+// or install deno and run from source https://deno.com/
 //
 // deno run --allow-run --allow-env --allow-net --allow-read --allow-write roha.js
 
@@ -20,7 +18,9 @@ import { resolve } from "https://deno.land/std/path/mod.ts";
 import OpenAI from "https://deno.land/x/openai@v4.67.2/mod.ts";
 
 const terminalColumns=120;
-const slowMillis = 25;
+const slowMillis=25;
+const SpentTokenChar="¤";
+const MaxFileSize=65536;
 
 const foundryVersion = "rc2";
 const rohaTitle="foundry "+foundryVersion;
@@ -28,15 +28,8 @@ const rohaMihi="I am testing foundry client. You are a helpful assistant.";
 const cleanupRequired="Switch model, drop shares or reset history to continue.";
 const pageBreak="#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+#+# #+# #+#+# #+#+# #+#+# #+#+# #+# #+#+# #+#";
 
-const mut="Model Under Test";
-
-// main roha application starts here
-
-const SpentTokenChar="¤";
-const MaxFileSize=65536;
-
-const appDir = Deno.cwd();
-const rohaPath = resolve(appDir,"foundry.json");
+const appDir=Deno.cwd();
+const rohaPath=resolve(appDir,"foundry.json");
 const accountsPath = resolve(appDir,"accounts.json");
 const ratesPath=resolve(appDir,"modelrates.json");
 const forgePath=resolve(appDir,"forge");
@@ -163,28 +156,20 @@ let tagList=[];
 let shareList=[];
 let memberList=[];
 
-const emptyMUT = {
-	notes:[],errors:[]
-}
-
-const emptyModel={
-	name:"empty",account:"",hidden:false,prompts:0,completion:0
-}
-
-const emptyTag={
-}
+const emptyMUT = {notes:[],errors:[]}
+const emptyModel={name:"empty",account:"",hidden:false,prompts:0,completion:0}
+const emptyTag={}
 
 // const emptyShare={path,size,modified,hash,tag,id}
 
 let roha=emptyRoha;
-let rohaCalls=0;
 let listCommand="";
 let creditCommand=null;
 let rohaShares=[];
 let currentDir = Deno.cwd();
 let rohaHistory;
 
-var sessionStack=[];
+const sessionStack=[];
 
 function pushHistory(){
 	sessionStack.push(rohaHistory);
@@ -278,14 +263,14 @@ function unitString(value,precision=2,type){
 	if(unit>0){
 		if(unit>4)unit=4;
 		let n = value / Math.pow(10, unit*3);
-		let digits = Math.max(1, String(Math.floor(n)).length);
+		const digits = Math.max(1, String(Math.floor(n)).length);
 		n = n.toFixed(Math.max(0, precision - digits));
 		return n+units[unit]+type;
 	}
 	return String(value)+type;
 }
 function measure(o){
-	let value=(typeof o==="string")?o.length:JSON.stringify(o).length;
+	const value=(typeof o==="string")?o.length:JSON.stringify(o).length;
 	return unitString(value,4,"B");
 }
 
@@ -293,17 +278,17 @@ let outputBuffer = [];
 let printBuffer = [];
 
 function print(){
-	let args=arguments.length?Array.from(arguments):[];
-	let lines=args.join(" ").split("\n");
-	for(let line of lines){
+	const args=arguments.length?Array.from(arguments):[];
+	const lines=args.join(" ").split("\n");
+	for(const line of lines){
 		printBuffer.push(line.trimEnd());
 	}
 }
 
 function echo(){
-	let args=arguments.length?Array.from(arguments):[];
-	let lines=args.join(" ").split("\n");
-	for(let line of lines){
+	const args=arguments.length?Array.from(arguments):[];
+	const lines=args.join(" ").split("\n");
+	for(const line of lines){
 		outputBuffer.push(line.trimEnd());
 	}
 }
@@ -311,7 +296,7 @@ function echo(){
 function debug(title,value){
 	print(title);
 	if(roha.config.verbose){
-		let json=JSON.stringify(value);
+		const json=JSON.stringify(value);
 		echo(json);
 	}
 }
@@ -319,7 +304,7 @@ function debug(title,value){
 async function log(lines,id){
 	if(roha.config.logging){
 		const time = new Date().toISOString();
-		let list=[];
+		const list=[];
 		for(let line of lines.split("\n")){
 			line=stripAnsi(line);
 			line=time+" ["+id+"] "+line+"\n";
@@ -346,7 +331,7 @@ async function flush() {
 }
 
 function wordWrap(text,cols=terminalColumns){
-	let result=[];
+	const result=[];
 	let pos=0;
 	while(pos<text.length){
 		let line=text.substring(pos,pos+cols);
