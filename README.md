@@ -1,3 +1,8 @@
+This repository is scheduled for demolition.
+
+Please see here for roha foundry release [forge](https://github.com/nitrologic/forge)
+
+
 ![foundry-rc2](media/foundry1.png)
 
 # nitrologic foundry
